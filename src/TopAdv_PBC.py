@@ -1,4 +1,4 @@
-from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters
+from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters_Base
 import HelperFns as HF
 import numpy as np
 import math
@@ -175,16 +175,30 @@ class simplex2D(simplex2D_Base):
         S_other.simplices[S_other_locid] = self
 # End of simplex2D_PBC class #################################################
 
+#need to decide what to include in the PrintParameters 
+@dataclass
+class PrintParameters(PrintParameters_Base):
+    color_weights: bool = False
+    log_color: bool = True
+    color_map: str = 'inferno_r'
+    experimental: bool = False
+    tt_lw_min_frac: float = 0.05
+    conversion_factor: float = None
+    max_weight: int = None
+
+
+
 # triangulation2D Class ######################################################
 #This is the triangulation class, the central class in the overall algorithm. It is initialized using a Delaunay triangulation
 class triangulation2D(triangulation2D_Base):
 
     #The constructor for triangulation2D.  ptlist is the list of [x,y] positions for the points at the initial time.
-    #Reminder that the input points are just in the fundamental domain.  We also have the size of the fundamental domain as [0,Dx) and [0,Dy) in the x and y directions repectively.  Important that the points are in this domain.  We also pass in Dx and Dy.  There are no control points, as this will be a triangulation without boundary.
+    #Reminder that the input points are just in the fundamental domain.  We also have the size of the fundamental domain as [0,Dx) and [0,Dy) in the x and y directions repectively. Domain = [[x_min,y_min],[x_max,y_max]], for PBC x_min & y_min must be = 0
+    #Important that the points are in this domain.  We also pass in Dx and Dy.  There are no control points, as this will be a triangulation without boundary.
      
-    def __init__(self, ptlist, FDsizes, empty = False):
+    def __init__(self, ptlist, Domain, empty = False):
         
-        self.FDsizes = FDsizes  #[Dx,Dy]
+        self.FDsizes = Domain[1]  #[Dx,Dy]
         self.dpindices = ((0,0),(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1),(-1,0))
         self.ptnum = len(ptlist)
         #These are two lists that give the relative copy of the FD that the final position is in relative to the initial position (initial pos is thought of as being in the FD).  The first one is relative to the initial positions and does not change in a given time-step (though of course is re-filled at the beginning of each time-step).  The second one starts off as identical, but is updated as points cross the boundary of the FD.  To be more specific, as a point crosses the FD, we still think of it as being in the FD, but the copy of the FD that the final position is in (relative to this now-moved point position) is now different.  The Crossing event list events will update this list.

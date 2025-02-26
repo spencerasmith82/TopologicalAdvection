@@ -1,4 +1,4 @@
-from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters
+from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters_Base
 import HelperFns as HF
 import numpy as np
 import math
@@ -109,18 +109,29 @@ class simplex2D(simplex2D_Base):
 # End of simplex2D class #####################################################
 
 
+#need to decide what to include in the PrintParameters 
+@dataclass
+class PrintParameters(PrintParameters_Base):
+    color_weights: bool = False
+    log_color: bool = True
+    color_map: str = 'inferno_r'
+
+
+
 # triangulation2D Class ######################################################
 #This is the triangulation class, the central class in the overall algorithm. It is initialized using a Delaunay triangulation
 class triangulation2D(triangulation2D_Base):
     #The constructor for triangulation2D.  ptlist is the list of [x,y] positions for the points at the initial time.
-    def __init__(self, ptlist, controlptlist = None, empty = False):
+    #Domain = [[x_min,y_min],[x_max,y_max]] The data point must be contained within this rectangular boundary at all times.
+    def __init__(self, ptlist, Domain = None, empty = False):
         self.extranum = 24  # the number of extra boundary points to use (must be even)
         self.extrapoints = []
-        if not empty: self.SetControlPoints(controlptlist, ptlist)
+        if not empty: self.SetControlPoints(Domain, ptlist)
         super().__init__(ptlist, empty)
 
     
-    def SetControlPoints(self, controlptlist, ptlist):
+    def SetControlPoints(self, Domain, ptlist):
+        #modify set control
         if controlptlist is not None:
             self.extranum = len(controlptlist)  #user input number of extra boundary points (could be any number)
         self.ptnum = len(ptlist) + self.extranum   #put in the number of points, since this does not change, and will be used often. 

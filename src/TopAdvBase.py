@@ -300,7 +300,7 @@ class WeightOperator:
 
 #need to decide what to include in the PrintParameters 
 @dataclass
-class PrintParameters:
+class PrintParameters_Base:
     filename: str = None
     triplot: bool = True
     Delaunay: bool = False
@@ -315,13 +315,6 @@ class PrintParameters:
     linecolor_tt: str = 'r'
     alpha_tt: float = 1.0
     frac: float = 0.8
-    color_weights: bool = False
-    log_color: bool = True
-    color_map: str = 'inferno_r'
-    experimental: bool = False
-    tt_lw_min_frac: float = 0.05
-    conversion_factor: float = None
-    max_weight: int = None
 
 
 # triangulation2D_Base Class #################################################
