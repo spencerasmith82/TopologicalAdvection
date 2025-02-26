@@ -1,0 +1,16 @@
+
+* covert many of the comments into doc strings
+
+*automatically generate teh docs
+
+* include the most recent additions to plotting to the regular triangulation2D class (currently updated in PBC version)
+
+* put in the copy method for both versions
+
+* create a new overall class - TopologicalAdvection - which takes in the same full trajectory infomation, periodic BC flag/ FDsize, time data.  It can then initialize the triangluation object (and copy), it can have methods to fully evolve the triangulation forward, evolve and make a movie, simple options for loop initialization, and loop evolution, finding the topological entropy, and later, perhaps finding any coherent structures.
+
+* Use GitHub for version control (ongoing)
+
+
+
+* flesh out the examples

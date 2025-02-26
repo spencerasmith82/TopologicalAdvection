@@ -13,7 +13,7 @@ import matplotlib.style as mplstyle
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib import rcParams
 
-# simplex2D_PBC class ########################################################
+# simplex2D class ########################################################
 class simplex2D(simplex2D_Base):
     """
     Child class simplex2D (periodic boundaries) extensions/notes:
