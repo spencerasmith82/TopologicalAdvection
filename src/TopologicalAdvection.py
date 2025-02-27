@@ -3,7 +3,7 @@ import TopAdv_PBC as TAp
 import HelperFns as HF
 import numpy as np
 import math
-
+from scipy.optimize import curve_fit
 
 class TopologicalAdvection:
 
@@ -22,6 +22,9 @@ class TopologicalAdvection:
         #and make a copy of it to do initial loop evaluations
         self.tri_init = self.tri.copy()
         self.evolved = False
+        self.TopologicalEntropy = None
+        self.TotalWeightOverTime = None
+        
 
     def EvolveTri(self, Delaunay = False):
         for i in range(1,len(self.Tslices)):
@@ -39,8 +42,9 @@ class TopologicalAdvection:
         iend = len(LogWeightsM)
         istart = int(indend/5)
         TE, TE_err = self.GetSlope(LogWeightsM,istart,iend)
+        self.TopologicalEntropy = [TE, TE_err]
+        self.TotalWeightOverTime = WeightsM
         return TE, TE_err, WeightsM
-        ##start here
 
     def GetSlopeFit(LWeightsIn,istart,iend):
         def linear_func(x, a, b):
@@ -49,6 +53,9 @@ class TopologicalAdvection:
         popt, pcov = curve_fit(linear_func, self.Times[istart:iend], LWeightsIn[istart:iend])
         perr = np.sqrt(np.diag(pcov))
         return [popt[0],perr[0]]
+
+
+    
     #can use HF.CounterToStr(countin) for plotting to movie files
 
 
