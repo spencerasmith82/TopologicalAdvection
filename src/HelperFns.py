@@ -6,7 +6,19 @@ import math
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from numba import jit
-    
+
+
+def CounterToStr(countin):
+    if countin < 10:
+        return "000"+str(countin)
+    elif countin < 100:
+        return "00"+str(countin)
+    elif countin < 1000:
+        return "0"+str(countin)
+    elif countin < 10000:
+        return str(countin)
+    else:
+        return "countertoobig"
 
 def BinarySearch(ListIn, TimeIn):
     """

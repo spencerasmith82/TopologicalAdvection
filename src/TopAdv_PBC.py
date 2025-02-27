@@ -1316,3 +1316,37 @@ class triangulation2D(triangulation2D_Base):
                                 if PP.color_weights: weights_out.append(Wp[i])
                                 line_weights_out.append(Wp_scaled[i])
         return patches_out, weights_out, line_weights_out
+
+
+    # TriCopy creates a copy of the current triangulation object
+    # If EvolutionReset is True, atstep is set to 0 and we do not copy the weight operators
+    def TriCopy(self, EvolutionReset = True):
+        #first create an empty triangulation object (to be returned at the end)
+        TriC = triangulation2D(None,None,empty = True)
+        if not EvolutionReset: TriC.atstep = self.atstep
+        TriC.FDsizes = copy.copy(self.FDsizes)
+        TriC.ptnum = self.ptnum
+        TriC.pointpos = copy.deepcopy(self.pointpos)
+        TriC.pointposfuture = copy.deepcopy(self.pointposfuture)
+        TriC.totalnumedges = self.totalnumedges
+        TriC.Vec = self.Vec
+        #create the simplist
+        for i in range(len(self.simplist)):
+            TriC.simplist.append(simplex2D(self.simplist[i].points))
+            TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)
+            TriC.simplist[-1].SLindex = i
+            TriC.simplist[-1].relptregion = copy.deepcopy(self.simplist[i].relptregion)
+        #now create the links
+        for i in range(len(self.simplist)):
+            for j in range(3):
+                if self.simplist[i].simplices[j] is not None:
+                    TriC.simplist[i].simplices[j] = TriC.simplist[self.simplist[i].simplices[j].SLindex]
+        #now fill the pointlist
+        for i in range(len(self.pointlist)):
+            TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])           
+        #if we do not reset the evolution related items, we copy them
+        if not EvolutionReset:
+            for i in range(len(self.WeightOperatorList)):
+                TriC.WeightOperatorList.append( WeightOperator( copy.copy( self.WeightOperatorList[i].es)))
+                TriC.WeightOperatorList[-1].time = self.WeightOperatorList[i].time   
+        return TriC

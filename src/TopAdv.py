@@ -124,34 +124,51 @@ class triangulation2D(triangulation2D_Base):
     #The constructor for triangulation2D.  ptlist is the list of [x,y] positions for the points at the initial time.
     #Domain = [[x_min,y_min],[x_max,y_max]] The data point must be contained within this rectangular boundary at all times.
     def __init__(self, ptlist, Domain = None, empty = False):
-        self.extranum = 24  # the number of extra boundary points to use (must be even)
         self.extrapoints = []
+        self.extranum = 0
+        self.Domain = Domain
         if not empty: self.SetControlPoints(Domain, ptlist)
         super().__init__(ptlist, empty)
 
-    
-    def SetControlPoints(self, Domain, ptlist):
-        #modify set control
-        if controlptlist is not None:
-            self.extranum = len(controlptlist)  #user input number of extra boundary points (could be any number)
-        self.ptnum = len(ptlist) + self.extranum   #put in the number of points, since this does not change, and will be used often. 
-        #calculate the extra boundary points
-        self.extrapoints = []
-        if controlptlist is None:
-            temppoints0 = np.array(ptlist)
-            ptcenter = np.average(temppoints0,axis = 0)   #the center (averaged)
-            ptrange = (np.max(temppoints0, axis = 0) - np.min(temppoints0, axis = 0))/2.0   #the bounding box half widths
-            rad = np.max(ptrange)   #effective bounding radius
-            sfactor = 3  #the factor used to scale up the bounding points ***Using a really large factor here seems to cause the Delaunay trangulation function below to give bad output.  Will keep any bounding points not too far away, though we will need to make sure (in later additions to the code) that the points won't wander outside of these bounds at some-point in the full trajectory data.
-            sfactor2 = 4
-            numcirc = int(self.extranum/2)
-            #now add extranum/2 points around a circle of radius sfactor*rad starting at theta = 0
-            self.extrapoints = [[ptcenter[0] + sfactor*rad*math.cos(2*math.pi*i/numcirc), ptcenter[1] + sfactor*rad*math.sin(2*math.pi*i/numcirc)] for i in range(numcirc)]
-            #now add another extranum/2 points around a larger circle of radius sfactor2*rad starting at 2*pi/(2*numcirc) (i.e. rotated to be angularly half-way between any pair of the first set of points)
-            angoffset = 2*math.pi/(2*numcirc)
-            self.extrapoints = self.extrapoints + [[ptcenter[0] + sfactor2*rad*math.cos(2*math.pi*i/numcirc + angoffset), ptcenter[1] + sfactor2*rad*math.sin(2*math.pi*i/numcirc + angoffset)] for i in range(0,numcirc)]
-        else:
-            self.extrapoints = controlptlist
+
+    def SetControlPoints(self, ptlist):
+        if self.Domain is None:
+            temppoints = np.array(ptlist)
+            x_min = np.min(temppoints[:,0])
+            y_min = np.min(temppoints[:,1])
+            x_max = np.max(temppoints[:,0])
+            y_max = np.max(temppoints[:,1])
+            dx = x_max - x_min
+            dy = y_max - y_min
+            x_pad = dx/5.0
+            y_pad = dy/5.0
+            self.Domain = [ [x_min - x_pad, y_min - y_pad], [x_max + x_pad, y_max + y_pad]]
+        #now find number of points along x and y boundary lines
+        npts = len(ptlist)
+        Deltax = (self.Domain[1][0] - self.Domain[0][0])
+        Deltay = (self.Domain[1][1] - self.Domain[0][1])
+        a_ratio = Deltax/Deltay
+        npts_x = int(np.sqrt(npts*a_ratio))
+        npts_y = int(npts/npts_x)
+        #npts_x*npts_y = npts
+        #npts_x = a_ratio*npts_y
+        dx = Deltax/(npts_x-1)
+        dy = Deltax/(npts_y-1)
+        x_set = np.linspace(self.Domain[0][0], self.Domain[1][0], num=npts_x, endpoint=True)
+        y_set = np.linspace(self.Domain[0][1], self.Domain[1][1], num=npts_y, endpoint=True)
+        x_set2 = np.linspace(self.Domain[0][0]-dx/2, self.Domain[1][0]+dx/2, num=npts_x+1, endpoint=True)
+        y_set2 = np.linspace(self.Domain[0][1]-dy/2, self.Domain[1][1]+dy/2, num=npts_y+1, endpoint=True)
+        Top1 = [[x_set[i], self.Domain[1][1]] for i in range(len(x_set))]
+        Bot1 = [[x_set[i], self.Domain[0][1]] for i in range(len(x_set))]
+        Top2 = [[x_set2[i], self.Domain[1][1] + dy/2] for i in range(len(x_set2))]
+        Bot2 = [[x_set2[i], self.Domain[0][1] - dy/2] for i in range(len(x_set2))]
+        Left1 = [[self.Domain[0][0], y_set[i]] for i in range(1,len(y_set)-1)]
+        Right1 = [[self.Domain[1][0], y_set[i]] for i in range(1,len(y_set)-1)]
+        Left2 = [[self.Domain[0][0] - dx/2, y_set2[i]] for i in range(1,len(y_set2)-1)]
+        Right2 = [[self.Domain[1][0] + dx/2, y_set2[i]] for i in range(1,len(y_set2)-1)]
+        self.extrapoints = Top1 + Bot1 + Top2 + Bot2 + Left1 + Right1 + Left2 + Right2
+        self.extranum = len(self.extrapoints)
+        self.ptnum = len(ptlist) + self.extranum
 
     
     def LoadPos(self,ptlist):
@@ -693,3 +710,39 @@ class triangulation2D(triangulation2D_Base):
                 if Wp[i] > delta:
                     patches_out.append(HF.BezierQuad(FracControlPts_In[(i+1)%3,:], SimpVCenter, FracControlPts_In[(i+2)%3,:]))
         return patches_out
+
+    
+   #this creates a copy of the current triangulation object with or without copying the weight operators
+    def TriCopy(self, EvolutionReset = True):
+        #first create an empty triangulation object (to be returned at the end)
+        TriC = triangulation2D(None, None, empty = True)
+        if not EvolutionReset: TriC.atstep = self.atstep
+        TriC.extranum = self.extranum
+        TriC.Domain = self.Domain
+        TriC.ptnum = self.ptnum
+        TriC.extrapoints = copy.deepcopy(self.extrapoints)
+        TriC.pointpos = copy.deepcopy(self.pointpos)
+        TriC.pointposfuture = copy.deepcopy(self.pointposfuture)
+        TriC.Vec = self.Vec
+        for i in range(len(self.simplist)):
+            TriC.simplist.append(simplex2D(self.simplist[i].points))
+            TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)
+            TriC.simplist[-1].SLindex = i
+        
+        #now create the links
+        for i in range(len(self.simplist)):
+            for j in range(3):
+                if not self.simplist[i].simplices[j] is None:
+                    TriC.simplist[i].simplices[j] = TriC.simplist[self.simplist[i].simplices[j].SLindex]
+
+        #now fill the pointlist
+        for i in range(len(self.pointlist)):
+            TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])
+                    
+        TriC.totalnumedges = self.totalnumedges
+
+        if not EvolutionReset:
+            for i in range(len(self.WeightOperatorList)):
+                TriC.WeightOperatorList.append(WeightOperator(copy.copy(self.WeightOperatorList[i].es)))
+                
+        return TriC

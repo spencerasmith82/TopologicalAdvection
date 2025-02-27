@@ -678,6 +678,7 @@ class triangulation2D_Base(ABC):
         pass
 
 
-
-
+    @abstractmethod
+    def TriCopy(self, EvolutionReset = True):
+        pass
 
