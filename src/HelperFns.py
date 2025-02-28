@@ -16,19 +16,53 @@ def progressBar(count_value, total, suffix=''):
     bar = '=' * filled_up_Length + '-' * (bar_length - filled_up_Length)
     sys.stdout.write('[%s] %s%s ...%s\r' %(bar, percentage, '%', suffix))
     sys.stdout.flush()
-    
 
-def GetBoundingDomain(ptlist, frac = 1.0/5.0):
-    temppoints = np.array(ptlist)
-    x_min = np.min(temppoints[:,0])
-    y_min = np.min(temppoints[:,1])
-    x_max = np.max(temppoints[:,0])
-    y_max = np.max(temppoints[:,1])
+def GetMinMaxXYTrajVals(Tslices):
+    TS = np.array(Tslices)
+    x_max = np.max(Tslices[:,:,0])
+    x_min = np.min(Tslices[:,:,0])
+    y_max = np.max(Tslices[:,:,1])
+    y_min = np.min(Tslices[:,:,1])
+    return [[x_min,y_min],[x_max,y_max]]
+
+def GetBoundingDomainSlice(ptlist, frac = 0.2):
+    ptlist_temp = np.array(ptlist)
+    x_max = np.max(ptlist_temp[:,0])
+    x_min = np.min(ptlist_temp[:,0])
+    y_max = np.max(ptlist_temp[:,1])
+    y_min = np.min(ptlist_temp[:,1])
     dx = x_max - x_min
     dy = y_max - y_min
     x_pad = dx*frac
     y_pad = dy*frac
-    return [[x_min - x_pad, y_min - y_pad], [x_max + x_pad, y_max + y_pad]]
+    return [[x_min - x_pad, y_min - y_pad],[x_max + x_pad, y_max + y_pad]]
+
+def GetBoundingDomainTraj(Tslices, PeriodicBC = False, frac = None):
+    BD = GetMinMaxXYTrajVals(Tslices)
+    if PeriodicBC:
+        BD[0] = [0,0]
+        return BD
+    else:
+        x_pad, y_pad = 0,0
+        Deltax = BD[1][0] - BD[0][0]
+        Deltay = BD[1][1] - BD[0][1]
+        if frac is None:
+            npts = len(Tslices[0])
+            a_ratio = Deltax/Deltay
+            npts_x = int(np.sqrt(npts*a_ratio))
+            npts_y = int(npts/npts_x)
+            #npts_x*npts_y = npts
+            #npts_x = a_ratio*npts_y
+            x_pad = Deltax/(npts_x-1)
+            y_pad = Deltax/(npts_y-1)
+        else:
+            x_pad = Deltax*frac
+            y_pad = Deltay*frac
+        BD[0][0] -= x_pad
+        BD[1][0] += x_pad
+        BD[0][1] -= y_pad
+        BD[1][1] += y_pad        
+        return BD
 
 
 def CounterToStr(countin):

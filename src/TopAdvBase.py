@@ -97,6 +97,11 @@ class simplex2D_Base(ABC):
         pass
 
     @abstractmethod
+    def EdgeNeighbors(self, IDin):
+        """Finds the edges which share a point. Abstract method"""
+        pass
+
+    @abstractmethod
     def SimpLink(self,S_other):
         """Links this simplex with S_other (and vice versa)"""
         pass
@@ -646,13 +651,13 @@ class triangulation2D_Base(ABC):
 
     def CurveWeightInitialize(self, curves, LoopIn, wadd = 1.0):
         for curve in curves:
-            point_set, is_closed = curve
-            edge_list = self.Get_Edges(point_set, is_closed)
+            point_set, is_closed, end_pts_pin = curve
+            edge_list = self.Get_Edges(point_set, is_closed, end_pts_pin)
             for edge in edge_list:
                 LoopIn.weightlist[edge] += wadd
 
     @abstractmethod
-    def Get_Edges(self, points, closed = True):
+    def Get_Edges(self, points, closed = True, end_pts_pin = True):
         pass
 
 ###########Plotting

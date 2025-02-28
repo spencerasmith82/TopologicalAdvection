@@ -109,7 +109,7 @@ class simplex2D(simplex2D_Base):
 
         Returns
         -------
-        list of simplex2D_PBC objects
+        list of simplex2D objects
             The simplices (in CCW cyclical order about the shared point - 
             IDin) adjacent to a point (IDin).
 
@@ -148,6 +148,52 @@ class simplex2D(simplex2D_Base):
             lsimplid = lsimp.edgeids.index(sharededge)
         return NeighborList[:-1], LocalIDList[:-1] #exclude the last element
 
+    def EdgeNeighbors(self, IDin):
+        """Finds the edges which share a point.
+
+        Parameters
+        ----------
+        IDin : int
+            The ID of a vertex/point in this simplex.
+
+        Returns
+        -------
+        list of 
+            The edge ids (in CCW cyclical order about the shared point - 
+            IDin) adjacent to a point (IDin).
+
+        
+        Notes
+        -----
+        This method requires that the simplex is part of a triangulation2D 
+        object (so that it has neighboring simplices).
+        """
+        NeighborList = []
+        LocalIDList = []
+        EdgeList = []
+        stpt = self.LocalID(IDin)
+        NeighborList.append(self)
+        sharededge = self.edgeids[(stpt+1)%3]
+        EdgeList.append(sharededge)
+        start_sharededge = sharededge
+        lsimp = self.simplices[(stpt+1)%3]
+        lsimplid = lsimp.edgeids.index(sharededge)
+        NeighborList.append(lsimp)
+        sharededge = NeighborList[-1].edgeids[(lsimplid+2)%3]
+        EdgeList.append(sharededge)
+        lsimp = NeighborList[-1].simplices[(lsimplid+2)%3]
+        lsimplid = lsimp.edgeids.index(sharededge)      
+        while not (lsimp is NeighborList[1] 
+                   and NeighborList[-1] is NeighborList[0] 
+                   and start_sharededge == sharededge):
+            NeighborList.append(lsimp)
+            sharededge = NeighborList[-1].edgeids[(lsimplid+2)%3]
+            EdgeList.append(sharededge)
+            lsimp = NeighborList[-1].simplices[(lsimplid+2)%3]                 
+            lsimplid = lsimp.edgeids.index(sharededge)
+        return EdgeList[:-1] #exclude the last element
+
+    
     def SimpLink(self,S_other, S_other_locid, edge_share):
         """
         Links this simplex with S_other (and vice versa).
@@ -922,7 +968,7 @@ class triangulation2D(triangulation2D_Base):
                 return False
         return True
 
-    def Get_Edges(self, points, closed = True):
+    def Get_Edges(self, points, closed = True, end_pts_pin = True):
         tree = KDTree(self.pointpos)
         _,nn = tree.query(points, k=1)
         simp_in = [self.Find_Simp(points[i],nn[i]) for i in range(len(nn))]
@@ -933,6 +979,12 @@ class triangulation2D(triangulation2D_Base):
             line_big = [points[i], points[(i+1)%len(points)]]
             simp_chain = self.Simp_Hop(points[(i+1)%len(points)], simp_in[i][0], line_big, simp_in[i][1], simp_in[i][2], simp_in[i][3])
             edge_list += [simp_chain[k][1] for k in range(len(simp_chain)-1)]
+        if not closed and end_pts_pin:
+            st_pt = simp_in[0][0].edgeids.index(edge_list[0])
+            start_edge_list = simp_in[0][0].EdgeNeighbors(simp_in[0][0].points[st_pt])
+            end_pt = simp_in[-1][0].edgeids.index(edge_list[-1])
+            end_edge_list = simp_in[-1][0].EdgeNeighbors(simp_in[-1][0].points[end_pt])
+            edge_list = start_edge_list + edge_list + end_edge_list + edge_list[::-1]
         HF.Reduce_List(edge_list)
         return edge_list
 

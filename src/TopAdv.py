@@ -85,6 +85,42 @@ class simplex2D(simplex2D_Base):
         return NeighborList, LocalIDList
 
 
+def EdgeNeighbors(self, IDin):
+        """Finds the edges which share a point.
+
+        Parameters
+        ----------
+        IDin : int
+            The ID of a vertex/point in this simplex.
+        
+        Returns
+        -------
+        list of ints
+            the edge ids (in CCW cyclical order about the shared point - 
+            IDin) adjacent to a point (IDin).  In the case of a boundary 
+            simplex (with None as one/two of the simplex neighbors), the list
+            is not necessarily in CCW order. 
+            
+        Note that this method requires that the simplex is connected up with
+        other simplices in a triangulation.
+        """
+        EdgeList = []
+        stpt = self.LocalID(IDin)
+        lsimp = self.simplices[(stpt+1)%3]
+        EdgeList.append(self.edgeids[(stpt+1)%3])
+        while (not self is lsimp) and (lsimp is not None):
+            lsimp_lid = lsimp.LocalID(IDin)
+            EdgeList.append(lsimp.edgeids[(lsimp_lid+1)%3])
+            lsimp = lsimp.simplices[(lsimp_lid+1)%3]
+        if lsimp is None:  #this deals with the boundary simplex case
+            rsimp = self.simplices[(stpt+2)%3]
+            while (not self is rsimp) and (rsimp is not None):
+                rsimp_lid = rsimp.LocalID(IDin)
+                EdgeList.append(rsimp.edgeids[(rsimp_lid+2)%3])
+                rsimp = rsimp.simplices[(rsimp_lid+2)%3]
+        return EdgeList    
+
+
     def SimpLink(self,S_other):
         """
         Links this simplex with S_other (and vice versa).
@@ -134,7 +170,7 @@ class triangulation2D(triangulation2D_Base):
 
     def SetControlPoints(self, ptlist):
         if self.Domain is None:
-            self.Domain = HF.GetBoundingDomain(ptlist, frac = 0.2)
+            self.Domain = HF.GetBoundingDomainSlice(ptlist, frac = 0.2)
         #now find number of points along x and y boundary lines
         npts = len(ptlist)
         Deltax = (self.Domain[1][0] - self.Domain[0][0])
@@ -551,8 +587,8 @@ class triangulation2D(triangulation2D_Base):
                 return False
         return True
 
-
-    def Get_Edges(self, points, closed = True):
+    #EdgeNeighbors
+    def Get_Edges(self, points, closed = True, end_pts_pin = True):
         tree = KDTree(self.pointpos)
         _,nn = tree.query(points, k=1)
         simp_in = [self.Find_Simp(points[i], nn[i]) for i in range(len(nn))]
@@ -563,6 +599,12 @@ class triangulation2D(triangulation2D_Base):
             line_big = [points[i], points[(i+1)%len(points)]]
             simp_chain = self.Simp_Hop(points[(i+1)%len(points)], simp_in[i], line_big)
             edge_list += [simp_chain[k][1] for k in range(len(simp_chain)-1)]
+        if not closed and end_pts_pin:
+            st_pt = simp_in[0].edgeids.index(edge_list[0])
+            start_edge_list = simp_in[0].EdgeNeighbors(simp_in[0].points[st_pt])
+            end_pt = simp_in[-1].edgeids.index(edge_list[-1])
+            end_edge_list = simp_in[-1].EdgeNeighbors(simp_in[-1].points[end_pt])
+            edge_list = start_edge_list + edge_list + end_edge_list + edge_list[::-1]
         HF.Reduce_List(edge_list)
         return edge_list
 
