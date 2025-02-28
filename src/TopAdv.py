@@ -1,4 +1,4 @@
-from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters_Base
+from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters
 import HelperFns as HF
 import numpy as np
 import math
@@ -12,6 +12,7 @@ import matplotlib.patches as mpatches
 import matplotlib.style as mplstyle
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib import rcParams
+from dataclasses import dataclass
 
 # simplex2D class ############################################################
 class simplex2D(simplex2D_Base):
@@ -111,7 +112,7 @@ class simplex2D(simplex2D_Base):
 
 #need to decide what to include in the PrintParameters 
 @dataclass
-class PrintParameters(PrintParameters_Base):
+class PrintParameters(PrintParameters):
     color_weights: bool = False
     log_color: bool = True
     color_map: str = 'inferno_r'
@@ -127,22 +128,13 @@ class triangulation2D(triangulation2D_Base):
         self.extrapoints = []
         self.extranum = 0
         self.Domain = Domain
-        if not empty: self.SetControlPoints(Domain, ptlist)
+        if not empty: self.SetControlPoints(ptlist)
         super().__init__(ptlist, empty)
 
 
     def SetControlPoints(self, ptlist):
         if self.Domain is None:
-            temppoints = np.array(ptlist)
-            x_min = np.min(temppoints[:,0])
-            y_min = np.min(temppoints[:,1])
-            x_max = np.max(temppoints[:,0])
-            y_max = np.max(temppoints[:,1])
-            dx = x_max - x_min
-            dy = y_max - y_min
-            x_pad = dx/5.0
-            y_pad = dy/5.0
-            self.Domain = [ [x_min - x_pad, y_min - y_pad], [x_max + x_pad, y_max + y_pad]]
+            self.Domain = HF.GetBoundingDomain(ptlist, frac = 0.2)
         #now find number of points along x and y boundary lines
         npts = len(ptlist)
         Deltax = (self.Domain[1][0] - self.Domain[0][0])
@@ -715,7 +707,7 @@ class triangulation2D(triangulation2D_Base):
    #this creates a copy of the current triangulation object with or without copying the weight operators
     def TriCopy(self, EvolutionReset = True):
         #first create an empty triangulation object (to be returned at the end)
-        TriC = triangulation2D(None, None, empty = True)
+        TriC = triangulation2D([], None, empty = True)
         if not EvolutionReset: TriC.atstep = self.atstep
         TriC.extranum = self.extranum
         TriC.Domain = self.Domain
@@ -736,6 +728,7 @@ class triangulation2D(triangulation2D_Base):
                     TriC.simplist[i].simplices[j] = TriC.simplist[self.simplist[i].simplices[j].SLindex]
 
         #now fill the pointlist
+        TriC.pointlist = []
         for i in range(len(self.pointlist)):
             TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])
                     

@@ -300,7 +300,7 @@ class WeightOperator:
 
 #need to decide what to include in the PrintParameters 
 @dataclass
-class PrintParameters_Base:
+class PrintParameters:
     filename: str = None
     triplot: bool = True
     Delaunay: bool = False
@@ -440,7 +440,7 @@ class triangulation2D_Base(ABC):
     #the start and stop index can also be specified to break this up into stages (only used for option 1 and 2)
     #Reverse does the operator actions in reverse order (i.e. for loops in the final triangulation)
     #option 1 just changes the data in the loop object, option 2 also accumulates a weight list with the total weights after each operator has acted on the loop, and gives the global time of the operator action. Option 3 (the default) returns a weight list which has the weights at the end of each time step (the intervals between each use of the Evolve method).  This weight list does not have the time listed, as this is only know externally. this is most useful for producing a list that we can directly tie to an external list of times.  This is what we need for extracting the topological entropy (hence the default option)
-    def OperatorAction(self, LoopIn, index = None, Reverse = False, option = 3):
+    def OperatorAction(self, LoopIn, index = None, Reverse = False, option = 3, num_times = None):
         startind = 0
         endind = len(self.WeightOperatorList)-1
         if index is not None:
@@ -492,7 +492,12 @@ class triangulation2D_Base(ABC):
                         while len(WeightList) < endtime-thistime:
                             WeightList.append(currentweight)
                     self.WeightOperatorList[i].Update(LoopIn,Reverse)            
-                WeightList.append(LoopIn.GetWeightTotal())            
+                WeightList.append(LoopIn.GetWeightTotal())
+            if num_times is not None:
+                while len(WeightList) < num_times:
+                
+                    WL_last = WeightList[-1]
+                    WeightList.append(WL_last)
             return WeightList
         else:
             print("Need to choose one of the options 1, 2, or 3")

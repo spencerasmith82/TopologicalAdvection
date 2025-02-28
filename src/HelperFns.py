@@ -6,6 +6,29 @@ import math
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 from numba import jit
+import sys
+
+
+def progressBar(count_value, total, suffix=''):
+    bar_length = 100
+    filled_up_Length = int(round(bar_length* count_value / float(total)))
+    percentage = round(100.0 * count_value/float(total),1)
+    bar = '=' * filled_up_Length + '-' * (bar_length - filled_up_Length)
+    sys.stdout.write('[%s] %s%s ...%s\r' %(bar, percentage, '%', suffix))
+    sys.stdout.flush()
+    
+
+def GetBoundingDomain(ptlist, frac = 1.0/5.0):
+    temppoints = np.array(ptlist)
+    x_min = np.min(temppoints[:,0])
+    y_min = np.min(temppoints[:,1])
+    x_max = np.max(temppoints[:,0])
+    y_max = np.max(temppoints[:,1])
+    dx = x_max - x_min
+    dy = y_max - y_min
+    x_pad = dx*frac
+    y_pad = dy*frac
+    return [[x_min - x_pad, y_min - y_pad], [x_max + x_pad, y_max + y_pad]]
 
 
 def CounterToStr(countin):

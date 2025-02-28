@@ -1,4 +1,4 @@
-from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters_Base
+from TopAdvBase import simplex2D_Base, Loop, WeightOperator, triangulation2D_Base, PrintParameters
 import HelperFns as HF
 import numpy as np
 import math
@@ -12,6 +12,7 @@ import matplotlib.patches as mpatches
 import matplotlib.style as mplstyle
 from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib import rcParams
+from dataclasses import dataclass
 
 # simplex2D class ########################################################
 class simplex2D(simplex2D_Base):
@@ -177,7 +178,7 @@ class simplex2D(simplex2D_Base):
 
 #need to decide what to include in the PrintParameters 
 @dataclass
-class PrintParameters(PrintParameters_Base):
+class PrintParameters(PrintParameters):
     color_weights: bool = False
     log_color: bool = True
     color_map: str = 'inferno_r'
@@ -1322,7 +1323,7 @@ class triangulation2D(triangulation2D_Base):
     # If EvolutionReset is True, atstep is set to 0 and we do not copy the weight operators
     def TriCopy(self, EvolutionReset = True):
         #first create an empty triangulation object (to be returned at the end)
-        TriC = triangulation2D(None,None,empty = True)
+        TriC = triangulation2D([], None, empty = True)
         if not EvolutionReset: TriC.atstep = self.atstep
         TriC.FDsizes = copy.copy(self.FDsizes)
         TriC.ptnum = self.ptnum
