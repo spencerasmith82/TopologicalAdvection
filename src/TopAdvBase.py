@@ -223,6 +223,9 @@ class Loop:
     def ProjectivizeWeights(self):
         mwv = max(max(self.weightlist),abs(min(self.weightlist)))
         self.weightlist = [x/mwv for x in self.weightlist]
+
+    def LoopCopy(self):
+        return copy.deepcopy(self)
 # End of Loop Class ##########################################################
 
 
@@ -649,9 +652,9 @@ class triangulation2D_Base(ABC):
             ptloc = CurrentSimp.LocalID(pt2)    
 
 
-    def CurveWeightInitialize(self, curves, LoopIn, wadd = 1.0):
+    def CurveWeightInitialize(self, curves, LoopIn):
         for curve in curves:
-            point_set, is_closed, end_pts_pin = curve
+            point_set, is_closed, end_pts_pin, wadd = curve
             edge_list = self.Get_Edges(point_set, is_closed, end_pts_pin)
             for edge in edge_list:
                 LoopIn.weightlist[edge] += wadd
