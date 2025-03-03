@@ -19,10 +19,10 @@ def progressBar(count_value, total, suffix=''):
 
 def GetMinMaxXYTrajVals(Tslices):
     TS = np.array(Tslices)
-    x_max = np.max(Tslices[:,:,0])
-    x_min = np.min(Tslices[:,:,0])
-    y_max = np.max(Tslices[:,:,1])
-    y_min = np.min(Tslices[:,:,1])
+    x_max = np.max(TS[:,:,0])
+    x_min = np.min(TS[:,:,0])
+    y_max = np.max(TS[:,:,1])
+    y_min = np.min(TS[:,:,1])
     return [[x_min,y_min],[x_max,y_max]]
 
 def GetBoundingDomainSlice(ptlist, frac = 0.2):
@@ -54,7 +54,7 @@ def GetBoundingDomainTraj(Tslices, PeriodicBC = False, frac = None):
             #npts_x*npts_y = npts
             #npts_x = a_ratio*npts_y
             x_pad = Deltax/(npts_x-1)
-            y_pad = Deltax/(npts_y-1)
+            y_pad = Deltay/(npts_y-1)
         else:
             x_pad = Deltax*frac
             y_pad = Deltay*frac

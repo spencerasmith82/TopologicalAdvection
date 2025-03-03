@@ -85,7 +85,7 @@ class simplex2D(simplex2D_Base):
         return NeighborList, LocalIDList
 
 
-def EdgeNeighbors(self, IDin):
+    def EdgeNeighbors(self, IDin):
         """Finds the edges which share a point.
 
         Parameters
@@ -166,11 +166,19 @@ class triangulation2D(triangulation2D_Base):
         self.Domain = Domain
         if not empty: self.SetControlPoints(ptlist)
         super().__init__(ptlist, empty)
+        self.BoundaryEdges = [] #for excluding edges from any retriangulation consideration
+        EdgeCounted = [False for i in range(self.totalnumedges)]
+        for simp in self.simplist:
+            for j in range(3):
+                if not EdgeCounted[simp.edgeids[j]]:
+                    EdgeCounted[simp.edgeids[j]] = True
+                    if simp.points[(j+1)%3] >= self.ptnum-self.extranum and simp.points[(j+2)%3] >= self.ptnum-self.extranum:
+                        self.BoundaryEdges.append(simp.edgeids[j])
 
 
     def SetControlPoints(self, ptlist):
         if self.Domain is None:
-            self.Domain = HF.GetBoundingDomainSlice(ptlist, frac = 0.2)
+            self.Domain = HF.GetBoundingDomainSlice(ptlist, frac = 0.1)
         #now find number of points along x and y boundary lines
         npts = len(ptlist)
         Deltax = (self.Domain[1][0] - self.Domain[0][0])
@@ -181,7 +189,7 @@ class triangulation2D(triangulation2D_Base):
         #npts_x*npts_y = npts
         #npts_x = a_ratio*npts_y
         dx = Deltax/(npts_x-1)
-        dy = Deltax/(npts_y-1)
+        dy = Deltay/(npts_y-1)
         x_set = np.linspace(self.Domain[0][0], self.Domain[1][0], num=npts_x, endpoint=True)
         y_set = np.linspace(self.Domain[0][1], self.Domain[1][1], num=npts_y, endpoint=True)
         x_set2 = np.linspace(self.Domain[0][0]-dx/2, self.Domain[1][0]+dx/2, num=npts_x+1, endpoint=True)
@@ -411,10 +419,11 @@ class triangulation2D(triangulation2D_Base):
             for simp in self.simplist:
                 for j in range(3):
                     edgeid = simp.edgeids[j]
-                    if not EdgeUsed[edgeid] and not simp.simplices[j] is None:
-                        EdgeUsed[edgeid] = True
-                        EdgeBSimps[edgeid] = [[simp,simp.simplices[j]],edgeid, True]
-                        IsD[edgeid] = self.IsLocallyDelaunay([simp,simp.simplices[j]])
+                    if not EdgeUsed[edgeid]:
+                        if not edgeid in self.BoundaryEdges:
+                            EdgeUsed[edgeid] = True
+                            EdgeBSimps[edgeid] = [[simp,simp.simplices[j]],edgeid, True]
+                            IsD[edgeid] = self.IsLocallyDelaunay([simp,simp.simplices[j]])
             InteriorEdge = EdgeUsed
             
         EdgeList = [EdgeBSimps[i] for i in range(self.totalnumedges) if IsD[i] == False and InteriorEdge[i]]
@@ -425,24 +434,25 @@ class triangulation2D(triangulation2D_Base):
         while len(EdgeList) > 0:
             EdgeSimps, edge_id, checked = EdgeList.pop()
             EdgeList_Epos[edge_id] = None
-            Flip = True
-            if not checked:
-                Flip = not self.IsLocallyDelaunay(EdgeSimps)
-            if Flip:
-                LRsimps = self.EdgeFlip(EdgeSimps, edge_id ,self.atstep)
-                for i in range(2): # Left and right simplices
-                    loc = LRsimps[i].edgeids.index(edge_id)
-                    lrsimp = LRsimps[i]
-                    for j in range(2): # upper and lower simplices
-                        eid = lrsimp.edgeids[(loc+1+j)%3]
-                        if InteriorEdge[eid]:
-                            adjsimp = lrsimp.simplices[(loc+1+j)%3]
-                            ELinsert = [[lrsimp,adjsimp], eid, False]
-                            if EdgeList_Epos[eid] == None:
-                                EdgeList_Epos[eid] = len(EdgeList)
-                                EdgeList.append(ELinsert)
-                            else:
-                                EdgeList[EdgeList_Epos[eid]] = ELinsert    
+            if not edge_id in self.BoundaryEdges:
+                Flip = True
+                if not checked:
+                    Flip = not self.IsLocallyDelaunay(EdgeSimps)
+                if Flip:
+                    LRsimps = self.EdgeFlip(EdgeSimps, edge_id ,self.atstep)
+                    for i in range(2): # Left and right simplices
+                        loc = LRsimps[i].edgeids.index(edge_id)
+                        lrsimp = LRsimps[i]
+                        for j in range(2): # upper and lower simplices
+                            eid = lrsimp.edgeids[(loc+1+j)%3]
+                            if InteriorEdge[eid]:
+                                adjsimp = lrsimp.simplices[(loc+1+j)%3]
+                                ELinsert = [[lrsimp,adjsimp], eid, False]
+                                if EdgeList_Epos[eid] == None:
+                                    EdgeList_Epos[eid] = len(EdgeList)
+                                    EdgeList.append(ELinsert)
+                                else:
+                                    EdgeList[EdgeList_Epos[eid]] = ELinsert    
 
 
     
@@ -454,23 +464,24 @@ class triangulation2D(triangulation2D_Base):
         for simp in self.simplist:
             for j in range(3):
                 edgeid = simp.edgeids[j]
-                if not EdgeUsed[edgeid] and not simp.simplices[j] is None:
-                    EdgeUsed[edgeid] = True
-                    Apt = simp.points[(j+2)%3]
-                    Ax[edgeid], Ay[edgeid] = self.pointpos[Apt]
-                    Bpt = simp.points[j]
-                    Bx[edgeid], By[edgeid] = self.pointpos[Bpt]
-                    Cpt = simp.points[(j+1)%3]
-                    Cx[edgeid], Cy[edgeid] = self.pointpos[Cpt]
-                    adjsimp = simp.simplices[j]
-                    BoundingSimps[edgeid] = [[simp,adjsimp], edgeid ,True]
-                    adjsimp_loc_id = adjsimp.edgeids.index(edgeid)
-                    Dpt = adjsimp.points[adjsimp_loc_id]
-                    Dx[edgeid], Dy[edgeid] = self.pointpos[Dpt]
+                if not EdgeUsed[edgeid]:
+                    if not edgeid in self.BoundaryEdges:
+                        EdgeUsed[edgeid] = True
+                        Apt = simp.points[(j+2)%3]
+                        Ax[edgeid], Ay[edgeid] = self.pointpos[Apt]
+                        Bpt = simp.points[j]
+                        Bx[edgeid], By[edgeid] = self.pointpos[Bpt]
+                        Cpt = simp.points[(j+1)%3]
+                        Cx[edgeid], Cy[edgeid] = self.pointpos[Cpt]
+                        adjsimp = simp.simplices[j]
+                        BoundingSimps[edgeid] = [[simp,adjsimp], edgeid ,True]
+                        adjsimp_loc_id = adjsimp.edgeids.index(edgeid)
+                        Dpt = adjsimp.points[adjsimp_loc_id]
+                        Dx[edgeid], Dy[edgeid] = self.pointpos[Dpt]
         return HF.IsDelaunayBaseWMask(Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,np.array(EdgeUsed)), EdgeUsed, BoundingSimps
     
 
-    #given the two adjecent simplices, determine if the configuration is locally Delaunay.  Returns True or False
+    #given the two adjacent simplices, determine if the configuration is locally Delaunay.  Returns True or False
     def IsLocallyDelaunay(self,AdjSimps):
         simp1 = AdjSimps[0]
         simp2 = AdjSimps[1]
@@ -600,7 +611,7 @@ class triangulation2D(triangulation2D_Base):
             simp_chain = self.Simp_Hop(points[(i+1)%len(points)], simp_in[i], line_big)
             edge_list += [simp_chain[k][1] for k in range(len(simp_chain)-1)]
         HF.Reduce_List(edge_list)
-        if not closed not end_pts_pin == [False, False]:
+        if not closed and not end_pts_pin == [False, False]:
             temp_edge_list = []
             if end_pts_pin[0]:
                 st_pt = simp_in[0].edgeids.index(edge_list[0])
@@ -762,6 +773,7 @@ class triangulation2D(triangulation2D_Base):
         TriC.pointpos = copy.deepcopy(self.pointpos)
         TriC.pointposfuture = copy.deepcopy(self.pointposfuture)
         TriC.Vec = self.Vec
+        TriC.BoundaryEdges = copy.copy(self.BoundaryEdges)
         for i in range(len(self.simplist)):
             TriC.simplist.append(simplex2D(self.simplist[i].points))
             TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)

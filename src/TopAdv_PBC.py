@@ -245,7 +245,8 @@ class triangulation2D(triangulation2D_Base):
      
     def __init__(self, ptlist, Domain, empty = False):
         
-        self.FDsizes = Domain[1]  #[Dx,Dy]
+        if not empty: self.FDsizes = Domain[1]  #[Dx,Dy]
+        else: self.FDsizes = None
         self.dpindices = ((0,0),(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1),(-1,0))
         self.ptnum = len(ptlist)
         #These are two lists that give the relative copy of the FD that the final position is in relative to the initial position (initial pos is thought of as being in the FD).  The first one is relative to the initial positions and does not change in a given time-step (though of course is re-filled at the beginning of each time-step).  The second one starts off as identical, but is updated as points cross the boundary of the FD.  To be more specific, as a point crosses the FD, we still think of it as being in the FD, but the copy of the FD that the final position is in (relative to this now-moved point position) is now different.  The Crossing event list events will update this list.
@@ -1381,13 +1382,14 @@ class triangulation2D(triangulation2D_Base):
         #first create an empty triangulation object (to be returned at the end)
         TriC = triangulation2D([], None, empty = True)
         if not EvolutionReset: TriC.atstep = self.atstep
-        TriC.FDsizes = copy.copy(self.FDsizes)
+        TriC.FDsizes = copy.deepcopy(self.FDsizes)
         TriC.ptnum = self.ptnum
         TriC.pointpos = copy.deepcopy(self.pointpos)
         TriC.pointposfuture = copy.deepcopy(self.pointposfuture)
         TriC.totalnumedges = self.totalnumedges
         TriC.Vec = self.Vec
         #create the simplist
+        TriC.simplist = []
         for i in range(len(self.simplist)):
             TriC.simplist.append(simplex2D(self.simplist[i].points))
             TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)
@@ -1399,9 +1401,11 @@ class triangulation2D(triangulation2D_Base):
                 if self.simplist[i].simplices[j] is not None:
                     TriC.simplist[i].simplices[j] = TriC.simplist[self.simplist[i].simplices[j].SLindex]
         #now fill the pointlist
+        TriC.pointlist = []
         for i in range(len(self.pointlist)):
             TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])           
         #if we do not reset the evolution related items, we copy them
+        TriC.WeightOperatorList = []
         if not EvolutionReset:
             for i in range(len(self.WeightOperatorList)):
                 TriC.WeightOperatorList.append( WeightOperator( copy.copy( self.WeightOperatorList[i].es)))
