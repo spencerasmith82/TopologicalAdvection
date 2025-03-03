@@ -322,7 +322,7 @@ class PrintParameters:
     linecolor_tri: str = 'g'
     linecolor_tt: str = 'r'
     alpha_tt: float = 1.0
-    frac: float = 0.8
+    frac: float = 0.9
 
 
 # triangulation2D_Base Class #################################################

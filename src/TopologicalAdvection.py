@@ -180,7 +180,7 @@ class CurveGenerator:
     def AddRectangle(self, center, w, h, phi = 0):
         points = np.array([[-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2]])
         points = np.array([center[0] + points[:,0]*np.cos(phi) - points[:,1]*np.sin(phi) ,
-                          center[1] + points[:,0]*np.sin(phi) + points[:,1]*np.cos(phi)])
+                          center[1] + points[:,0]*np.sin(phi) + points[:,1]*np.cos(phi)]).T
         self.AddClosedCurve(points)
 
     def AddSquare(self, center, L, phi = 0):
@@ -191,10 +191,15 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
+            delta = 1e-5*(self.Domain[1][1] -  self.Domain[0][1])
             points = [[x_val, self.Domain[0][1]],[x_val, self.Domain[1][1]]]
             if self.PeriodicBC:
+                points[0][1] += delta
+                points[1][1] -= delta
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
+                points[0][1] -= delta
+                points[1][1] += delta
                 self.Curves.append([points, False, [True, True], 0.5])
 
     def AddHorizontalLine(self, y_val):
@@ -202,10 +207,15 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
+            delta = 1e-5*(self.Domain[1][0] -  self.Domain[0][0])
             points = [[self.Domain[0][0], y_val ], [self.Domain[1][0], y_val]]
             if self.PeriodicBC:
+                points[0][0] += delta
+                points[1][0] -= delta
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
+                points[0][0] -= delta
+                points[1][0] += delta
                 self.Curves.append([points, False, [True, True], 0.5])
         
     def AddLineSegment(self, pt1, pt2):

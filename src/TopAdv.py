@@ -152,6 +152,7 @@ class PrintParameters(PrintParameters):
     color_weights: bool = False
     log_color: bool = True
     color_map: str = 'inferno_r'
+    boundary_points: bool = False
 
 
 
@@ -190,18 +191,23 @@ class triangulation2D(triangulation2D_Base):
         #npts_x = a_ratio*npts_y
         dx = Deltax/(npts_x-1)
         dy = Deltay/(npts_y-1)
+        delta = 1e-6*min(dx,dy)
         x_set = np.linspace(self.Domain[0][0], self.Domain[1][0], num=npts_x, endpoint=True)
+        x_sety = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_x, endpoint=True)))*delta
         y_set = np.linspace(self.Domain[0][1], self.Domain[1][1], num=npts_y, endpoint=True)
+        y_setx = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_y, endpoint=True)))*delta
         x_set2 = np.linspace(self.Domain[0][0]-dx/2, self.Domain[1][0]+dx/2, num=npts_x+1, endpoint=True)
+        x_sety2 = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_x+1, endpoint=True)))*delta
         y_set2 = np.linspace(self.Domain[0][1]-dy/2, self.Domain[1][1]+dy/2, num=npts_y+1, endpoint=True)
-        Top1 = [[x_set[i], self.Domain[1][1]] for i in range(len(x_set))]
-        Bot1 = [[x_set[i], self.Domain[0][1]] for i in range(len(x_set))]
-        Top2 = [[x_set2[i], self.Domain[1][1] + dy/2] for i in range(len(x_set2))]
-        Bot2 = [[x_set2[i], self.Domain[0][1] - dy/2] for i in range(len(x_set2))]
-        Left1 = [[self.Domain[0][0], y_set[i]] for i in range(1,len(y_set)-1)]
-        Right1 = [[self.Domain[1][0], y_set[i]] for i in range(1,len(y_set)-1)]
-        Left2 = [[self.Domain[0][0] - dx/2, y_set2[i]] for i in range(1,len(y_set2)-1)]
-        Right2 = [[self.Domain[1][0] + dx/2, y_set2[i]] for i in range(1,len(y_set2)-1)]
+        y_setx2 = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_y+1, endpoint=True)))*delta
+        Top1 = [[x_set[i], self.Domain[1][1] + x_sety[i]] for i in range(len(x_set))]
+        Bot1 = [[x_set[i], self.Domain[0][1] - x_sety[i]] for i in range(len(x_set))]
+        Top2 = [[x_set2[i], self.Domain[1][1] + dy/2 + x_sety2[i]] for i in range(len(x_set2))]
+        Bot2 = [[x_set2[i], self.Domain[0][1] - dy/2 - x_sety2[i]] for i in range(len(x_set2))]
+        Left1 = [[self.Domain[0][0] - y_setx[i], y_set[i]] for i in range(1,len(y_set)-1)]
+        Right1 = [[self.Domain[1][0] + y_setx[i], y_set[i]] for i in range(1,len(y_set)-1)]
+        Left2 = [[self.Domain[0][0] - dx/2 - y_setx2[i], y_set2[i]] for i in range(1,len(y_set2)-1)]
+        Right2 = [[self.Domain[1][0] + dx/2 + y_setx2[i], y_set2[i]] for i in range(1,len(y_set2)-1)]
         self.extrapoints = Top1 + Bot1 + Top2 + Bot2 + Left1 + Right1 + Left2 + Right2
         self.extranum = len(self.extrapoints)
         self.ptnum = len(ptlist) + self.extranum
@@ -658,16 +664,25 @@ class triangulation2D(triangulation2D_Base):
     
     # TriangulationPlotBase - This plots the underlying triangulation
     def TriangulationPlotBase(self, ax, PP: PrintParameters):
-        xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-self.extranum]]  #note that we exclude the bounding points
-        ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-self.extranum]]
-        triangles = [x.points for x in self.simplist if (len(set(x.points).intersection([(len(self.pointpos)-y) for y in range(1,self.extranum+1)])) == 0)]  #make sure that the list of triangles (triplets of points) do not include the excluded large triangle points
-        ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
+        if not PP.boundary_points:
+            xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-self.extranum]]  #note that we exclude the bounding points
+            ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-self.extranum]]
+            triangles = [x.points for x in self.simplist if (len(set(x.points).intersection([(len(self.pointpos)-y) for y in range(1,self.extranum+1)])) == 0)]  #make sure that the list of triangles (triplets of points) do not include the excluded large triangle points
+            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
+        else:
+            xpoints = [x[0] for x in self.pointpos]  
+            ypoints = [x[1] for x in self.pointpos]
+            triangles = [x.points for x in self.simplist]
+            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
 
     
 # PointPlotBase - plots the points (excluding the bounding points), with options for the size of the point and including the point label
     def PointPlotBase(self, ax, PP: PrintParameters):
-        xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-self.extranum]]  #note that we exclude the bounding points
-        ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-self.extranum]]
+        ptlen = len(self.pointpos)
+        if not PP.boundary_points:
+            ptlen -= self.extranum
+        xpoints = [x[0] for x in self.pointpos[:ptlen]]  
+        ypoints = [x[1] for x in self.pointpos[:ptlen]]
         if PP.ptlabels:
             for k in range(len(xpoints)):
                 ax.annotate(k,(xpoints[k],ypoints[k]))
