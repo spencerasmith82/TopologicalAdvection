@@ -4,6 +4,7 @@ import TopAdvBase as TAbase
 import HelperFns as HF
 import numpy as np
 import math
+import os
 from scipy.optimize import curve_fit
 from dataclasses import dataclass
 
@@ -99,9 +100,9 @@ class TopologicalAdvection:
 
     #to change plotting parameters, before using this function, set the prameters in 
     #the PrintParameters attribute (a data object)
-    def Plot(self, Loop = True, Initial = False):
+    def Plot(self, PlotLoop = True, Initial = False):
         setattr(self.PrintParameters, "Delaunay", self.IsDelaunay)
-        if not Loop:
+        if not PlotLoop:
             if Initial:
                 self.TriInit.Plot(LoopIn = None, PP = self.PrintParameters)
             else:
@@ -118,36 +119,50 @@ class TopologicalAdvection:
             
 
 
-    def MoviePlots(self, ImageFolder = "MovieImages/", ImageName = "EvolvingLoop", filetype = ".png"):
-        setattr(self.PrintParameters, "Delaunay", True)
-        if self.Loop is not None:
+    def MovieFigures(self, PlotLoop = True, Delaunay = True, ImageFolder = "MovieImages/", ImageName = "EvolvingLoop", filetype = ".png"):
+        setattr(self.PrintParameters, "Delaunay", Delaunay)
+        if self.Loop is not None and PlotLoop:
             self.ResetTri()
             loop = self.Loop.LoopInitial.LoopCopy()
-            counter = 0
-            #make sure that folder exists, and if not, make it
-            fname = ImageFolder + ImageName + HF.CounterToStr(counter) + filetype
+            if not os.path.exists(ImageFolder):
+                os.makedirs(ImageFolder)
+            fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
             setattr(self.PrintParameters, "filename", fname)
             self.Tri.Plot(LoopIn = loop, PP = self.PrintParameters)
             startind, stopind = 0, 0
             for i in range(1, self.NumTimes):
                 startind = stopind+1
                 HF.progressBar(i, self.NumTimes)
-                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = True)
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = Delaunay)
                 stopind = len(self.Tri.WeightOperatorList)-1
                 self.Tri.OperatorAction(loop, index = [startind,stopind], option = 1)
                 fname = ImageFolder + ImageName + HF.CounterToStr(i) + filetype
                 setattr(self.PrintParameters, "filename", fname)
                 self.Tri.Plot(LoopIn = loop, PP = self.PrintParameters)
             self.TriEvolved = True
-            self.IsDelaunay = True
+            self.IsDelaunay = Delaunay
             setattr(self.PrintParameters, "filename", None)
-        else:
+        elif self.Loop is None and PlotLoop:
             print("Need to create an initial loop first")
+        else:
+            self.ResetTri()
+            if not os.path.exists(ImageFolder):
+                os.makedirs(ImageFolder)
+            fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
+            setattr(self.PrintParameters, "filename", fname)
+            self.Tri.Plot(LoopIn = None, PP = self.PrintParameters)
+            for i in range(1, self.NumTimes):
+                HF.progressBar(i, self.NumTimes)
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = Delaunay)
+                fname = ImageFolder + ImageName + HF.CounterToStr(i) + filetype
+                setattr(self.PrintParameters, "filename", fname)
+                self.Tri.Plot(LoopIn = None, PP = self.PrintParameters)
+            self.TriEvolved = True
+            self.IsDelaunay = Delaunay
+            setattr(self.PrintParameters, "filename", None)
             
         
-        
-        
-    #can use HF.CounterToStr(countin) for plotting to movie files
+
 
 
 

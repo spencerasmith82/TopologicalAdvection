@@ -313,7 +313,7 @@ class PrintParameters:
     triplot: bool = True
     Delaunay: bool = False
     Bounds: list = None
-    FigureSize: list = field(default_factory=lambda: [8, 8])
+    FigureSizeX: float = 8
     dpi: int = 200
     ptlabels: bool = False
     markersize: float = 2.0

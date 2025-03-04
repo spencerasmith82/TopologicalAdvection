@@ -647,7 +647,11 @@ class triangulation2D(triangulation2D_Base):
     #####Plotting
         # PlotPrelims - the preliminary plotting settings.  returns the newly created figure and axes.
     def PlotPrelims(self, PP: PrintParameters):
-        szx, szy = PP.FigureSize
+        szx = PP.FigureSizeX
+        szy = szx
+        if PP.Bounds is not None:
+            szy = szx*(PP.Bounds[1][1] - PP.Bounds[0][1])/(PP.Bounds[1][0] - PP.Bounds[0][0])
+            szy += 1.0/PP.dpi*(int(szy*PP.dpi)%2)  #szy*dpi must be even
         fig = plt.figure(figsize=(szx,szy), dpi=PP.dpi, frameon=False)
         ax = fig.gca()
         rcParams['savefig.pad_inches'] = 0
@@ -657,8 +661,10 @@ class triangulation2D(triangulation2D_Base):
             ax.set_xlim((PP.Bounds[0][0], PP.Bounds[1][0]))
             ax.set_ylim((PP.Bounds[0][1], PP.Bounds[1][1]))
         ax.set_aspect('equal')
+        #ax.set_frame_on(False)
         ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
         ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+        fig.tight_layout(pad=0)
         return fig, ax
 
     

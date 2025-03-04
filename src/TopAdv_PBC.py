@@ -1009,7 +1009,10 @@ class triangulation2D(triangulation2D_Base):
     #####Plotting
     # PlotPrelims - the preliminary plotting settings.  returns the newly created figure and axes.
     def PlotPrelims(self, PP: PrintParameters):
-        szx, szy = PP.FigureSize
+        szx = PP.FigureSizeX
+        szy = szx
+        if PP.Bounds is not None:
+            szy = szx*(PP.Bounds[1][1] - PP.Bounds[0][1])/(PP.Bounds[1][0] - PP.Bounds[0][0])
         fig = plt.figure(figsize=(szx,szy), dpi=PP.dpi, frameon=False)
         ax = fig.gca()
         mplstyle.use('fast')
@@ -1027,6 +1030,7 @@ class triangulation2D(triangulation2D_Base):
         ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
         bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         PP.conversion_factor = self.FDsizes[0]/bbox.width/72
+        fig.tight_layout(pad=0)
         return fig, ax    
     
     # TriangulationPlotBase - This plots the underlying triangulation
