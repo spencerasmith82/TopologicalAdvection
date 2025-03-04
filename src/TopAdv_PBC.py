@@ -1013,6 +1013,7 @@ class triangulation2D(triangulation2D_Base):
         szy = szx
         if PP.Bounds is not None:
             szy = szx*(PP.Bounds[1][1] - PP.Bounds[0][1])/(PP.Bounds[1][0] - PP.Bounds[0][0])
+            szy += 1.0/PP.dpi*(int(szy*PP.dpi)%2)  #szy*dpi must be even
         fig = plt.figure(figsize=(szx,szy), dpi=PP.dpi, frameon=False)
         ax = fig.gca()
         mplstyle.use('fast')
@@ -1028,9 +1029,9 @@ class triangulation2D(triangulation2D_Base):
         ax.set_aspect('equal')
         ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
         ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+        fig.tight_layout(pad=0)
         bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         PP.conversion_factor = self.FDsizes[0]/bbox.width/72
-        fig.tight_layout(pad=0)
         return fig, ax    
     
     # TriangulationPlotBase - This plots the underlying triangulation
@@ -1080,16 +1081,13 @@ class triangulation2D(triangulation2D_Base):
     
     def TTPlotBase(self, ax,LoopIn, PP: PrintParameters):
         EdgePlotted = [False for i in range(self.totalnumedges)]  #keeps track of segments that have been plotted (so as to not plot an element twice)
-        ttpatches = []
-        cweights = []
-        line_widths = []
+        ttpatches, cweights, line_widths = [], [], []
         if not PP.Delaunay:  #regular case, works for any triangulation
             for simp in self.simplist:
                 new_ttpatches, new_cweights = self.GeneralSimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
                 ttpatches += new_ttpatches
                 if PP.color_weights:
-                    cweights += new_cweights
-                    
+                    cweights += new_cweights             
         else:  #looks nicer, but only works for a Delaunay triangulation
             if not PP.experimental:
                 for simp in self.simplist:

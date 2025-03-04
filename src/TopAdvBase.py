@@ -5,7 +5,7 @@ import HelperFns as HF
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import itemgetter, attrgetter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # simplex2D_Base class #######################################################
 class simplex2D_Base(ABC):

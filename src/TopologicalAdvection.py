@@ -50,8 +50,8 @@ class TopologicalAdvection:
     def ResetTri(self):
         self.Tri = self.TriInit.TriCopy()
         self.TriEvolved = False
+        
     #make a function to calculate the topological entropy from the best fit
-
     def GetTopologicalEntropy(self, frac_start = 0.0):
         if not self.TriEvolved:
             self.EvolveTri()
@@ -73,7 +73,6 @@ class TopologicalAdvection:
         perr = np.sqrt(np.diag(pcov))
         return [popt[0],perr[0]]
 
-
     def ClearLoop(self):
         self.Loop =  None
 
@@ -91,13 +90,14 @@ class TopologicalAdvection:
         if not self.Loop.LoopEvolved:
             self.Tri.OperatorAction(self.Loop.LoopFinal, option = 1)
             self.Loop.LoopEvolved = True
-
-                
+ 
     def SetPrintParameters(self,**kwargs):
         for key, value in kwargs.items():
             setattr(self.PrintParameters, key, value)
-    
 
+    def ResetPrintParametersDefault(self):
+        self.PrintParameters = self.TA.PrintParameters(Bounds = self.Domain)
+    
     #to change plotting parameters, before using this function, set the prameters in 
     #the PrintParameters attribute (a data object)
     def Plot(self, PlotLoop = True, Initial = False):
@@ -188,13 +188,13 @@ class CurveGenerator:
 
     def AddEllipse(self, center, a, b, phi = 0):
         theta = np.linspace(0, 2*np.pi, num=self.NumPoints, endpoint=False)
-        points = np.array([center[0] + a*np.cos(theta)*np.cos(phi) - b*np.sin(theta)*np.sin(phi) ,
+        points = np.array([center[0] + a*np.cos(theta)*np.cos(phi) - b*np.sin(theta)*np.sin(phi),
                            center[1] + a*np.cos(theta)*np.sin(phi) + b*np.sin(theta)*np.cos(phi)]).T
         self.AddClosedCurve(points)
 
     def AddRectangle(self, center, w, h, phi = 0):
         points = np.array([[-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2]])
-        points = np.array([center[0] + points[:,0]*np.cos(phi) - points[:,1]*np.sin(phi) ,
+        points = np.array([center[0] + points[:,0]*np.cos(phi) - points[:,1]*np.sin(phi),
                           center[1] + points[:,0]*np.sin(phi) + points[:,1]*np.cos(phi)]).T
         self.AddClosedCurve(points)
 
@@ -206,15 +206,11 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
-            delta = 1e-5*(self.Domain[1][1] -  self.Domain[0][1])
-            points = [[x_val, self.Domain[0][1]],[x_val, self.Domain[1][1]]]
+            delta = 1e-6*(self.Domain[1][1] -  self.Domain[0][1])
+            points = [[x_val, self.Domain[0][1]+delta],[x_val, self.Domain[1][1]-delta]]
             if self.PeriodicBC:
-                points[0][1] += delta
-                points[1][1] -= delta
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
-                points[0][1] -= delta
-                points[1][1] += delta
                 self.Curves.append([points, False, [True, True], 0.5])
 
     def AddHorizontalLine(self, y_val):
@@ -222,15 +218,11 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
-            delta = 1e-5*(self.Domain[1][0] -  self.Domain[0][0])
-            points = [[self.Domain[0][0], y_val ], [self.Domain[1][0], y_val]]
+            delta = 1e-6*(self.Domain[1][0] -  self.Domain[0][0])
+            points = [[self.Domain[0][0]+delta, y_val ], [self.Domain[1][0]-delta, y_val]]
             if self.PeriodicBC:
-                points[0][0] += delta
-                points[1][0] -= delta
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
-                points[0][0] -= delta
-                points[1][0] += delta
                 self.Curves.append([points, False, [True, True], 0.5])
         
     def AddLineSegment(self, pt1, pt2):
