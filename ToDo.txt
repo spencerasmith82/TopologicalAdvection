@@ -1,12 +1,8 @@
 
 * covert many of the comments into doc strings
 
-*automatically generate the docs
-
-* include the most recent additions to plotting to the regular triangulation2D class (currently updated in PBC version)
-
+* automatically generate the docs (use Sphinx)
 
 * Continue to improve the TopologicalAdvection class (later perhaps add a finding coherent structures method)
-
 
 * flesh out the examples

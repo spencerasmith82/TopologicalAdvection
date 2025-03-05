@@ -6,7 +6,7 @@ import numpy as np
 import math
 import os
 from scipy.optimize import curve_fit
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 class TopologicalAdvection:
 
@@ -29,6 +29,16 @@ class TopologicalAdvection:
         self.PrintParameters = self.TA.PrintParameters(Bounds = self.Domain)
         #now initialize a triangulation object
         self.Tri = self.TA.triangulation2D(self.Tslices[0], self.Domain)
+        if not PeriodicBC:
+            ExBnd = HF.GetBoundingDomainSlice(self.Tri.pointpos, frac = 0.0)
+            dx = (ExBnd[1][0] - ExBnd[0][0])/np.sqrt(len(self.Tri.pointpos))
+            dy = (ExBnd[1][1] - ExBnd[0][1])/np.sqrt(len(self.Tri.pointpos))
+            dz = min(dx,dy)
+            ExBnd[0][0] -= dz
+            ExBnd[1][0] += dz
+            ExBnd[0][1] -= dz
+            ExBnd[1][1] += dz
+            setattr(self.PrintParameters, "ExpandedBounds", ExBnd)
         #and make a copy of it to do initial loop evaluations
         self.TriInit = self.Tri.TriCopy()
         self.TriEvolved = False
@@ -97,6 +107,11 @@ class TopologicalAdvection:
 
     def ResetPrintParametersDefault(self):
         self.PrintParameters = self.TA.PrintParameters(Bounds = self.Domain)
+
+    def PrintPrintParameters(self):
+        for key, value in asdict(self.PrintParameters).items():
+            if not (key == "conversion_factor" or key == "max_weight"):
+                print(f"{key}: {value}")
     
     #to change plotting parameters, before using this function, set the prameters in 
     #the PrintParameters attribute (a data object)
@@ -109,11 +124,14 @@ class TopologicalAdvection:
                 self.Tri.Plot(LoopIn = None, PP =self.PrintParameters)
         else:
             if self.Loop is not None:
-                if Initial:
-                    self.TriInit.Plot(LoopIn = self.Loop.LoopInitial , PP = self.PrintParameters)
+                if not self.Loop.LoopInitial.Shear:
+                    if Initial:
+                        self.TriInit.Plot(LoopIn = self.Loop.LoopInitial , PP = self.PrintParameters)
+                    else:
+                        self.EvolveLoop()  #does nothing if already evolved
+                        self.Tri.Plot(LoopIn = self.Loop.LoopFinal, PP = self.PrintParameters)
                 else:
-                    self.EvolveLoop()  #does nothing if already evolved
-                    self.Tri.Plot(LoopIn = self.Loop.LoopFinal, PP = self.PrintParameters)
+                    print("Currently don't support plotting loops represented with shear coordinates")
             else:
                 print("Need to create a loop")
             

@@ -54,6 +54,7 @@ class simplex2D(simplex2D_Base):
         point at different vertices), extra parameters are passed in 
         (S_other_locid and edge_share).
     """
+    _added_docstring = False
     
     def __init__(self, IDlist, RelPtPos = [[0,0],[0,0],[0,0]]):
         """
@@ -90,8 +91,9 @@ class simplex2D(simplex2D_Base):
         object.
         """  
         # Access and modify the class docstring
-        if simplex2D_Base._count == 0:
+        if not simplex2D._added_docstring:
             self.__class__.__doc__ = simplex2D_Base.__doc__ + "\n" + self.__class__.__doc__
+            simplex2D._added_docstring = True
         super().__init__(IDlist)
         self.relptregion = copy.deepcopy(RelPtPos) # the relative points regions
 
@@ -225,13 +227,7 @@ class simplex2D(simplex2D_Base):
 #need to decide what to include in the PrintParameters 
 @dataclass
 class PrintParameters(PrintParameters):
-    color_weights: bool = False
-    log_color: bool = True
-    color_map: str = 'inferno_r'
-    experimental: bool = False
-    tt_lw_min_frac: float = 0.05
-    conversion_factor: float = None
-    max_weight: int = None
+    #already have everything we need in the parent class
 
 
 
@@ -494,7 +490,7 @@ class triangulation2D(triangulation2D_Base):
         #returns the point index, the time of crossing, and the move direction (-1,0,1 for both the x and y directions)
 
     # AreaZeroTimeSingle returns a pair [IsSoln, timeOut], where IsSoln is a boolian that is true if one of the two times to go through zero area is between Tin and 1, and false if not.  If true, then timeOut gives this time (if two times, then this gives the smallest)
-    def AreaZeroTimeSingle(self,SimpIn,Tin = 0):
+    def AreaZeroTimeSingle(self, SimpIn, Tin = 0):
         #first, by convention, we are going to take a specific copy of this simplex ... the one where the first point stored in the simplex is considered to be in the fundamental domain.  For boundary simplices, this gives us one copy to consider.
         ptlist = SimpIn.points
         rpr = SimpIn.relptregion
@@ -540,7 +536,7 @@ class triangulation2D(triangulation2D_Base):
 
 
     # AreaZeroTimeMultiple goes through every simplex and looks for whether the area zero time is between Tin and 1.  Similar to AreaZeroTimeSingle, but wrapping up the info in np arrays to get vectorization and jit boost.
-    def AreaZeroTimeMultiple(self,Tin = 0):
+    def AreaZeroTimeMultiple(self, Tin = 0):
         Dx, Dy = self.FDsizes
         nsimps = len(self.simplist)
         pts0 = np.array([self.simplist[i].points[0] for i in range(nsimps)])
@@ -896,6 +892,101 @@ class triangulation2D(triangulation2D_Base):
         else:
             return [AreAdjacent,None]
 
+    def DoesCurveLeft(self,pttriple):
+        pt1, pt2, pt3 = pttriple
+        pos1 = self.pointpos[pt1]
+        pos2 = self.pointpos[pt2]
+        pos3 = self.pointpos[pt3]
+        crossP = (pos3[0] - pos2[0])*(pos1[1] - pos2[1]) - (pos3[1] - pos2[1])*(pos1[0] - pos2[0])
+        return crossP >= 0
+
+    #this determines if the given point (ptin) is to the left of line that goes from the first to second point in linepts
+    #Used in determining the edges crossed in an initial band
+    def IsLeft(self,linepts,ptin):
+        pttriple = [ptin,linepts[0], linepts[1]]
+        return self.DoesCurveLeft(pttriple)
+
+    #This takes the two points in linepoints and adds a weight of one (or non-default value) to any edges that are crossed
+    #by the line.
+    def AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
+        pt1, pt2 = linepoints
+        if Boolin[1][0]: #this is the case of adjacent points (i.e. the line between the points is an edge)
+            #only if the curvelefts' (Boolin[0], Boolin[2]) are opposite one another, do we add a weight
+            if Boolin[0] is not Boolin[2]:
+                pt1rtlocid = Boolin[1][1][1].LocalID(pt1)
+                edgeindex = Boolin[1][1][1].edgeids[(pt1rtlocid+1)%3]
+                LoopIn.weightlist[edgeindex] += wadd
+        else:
+            #first we need to determine the direction (which simplex) to set out from that has pt1 as a point.
+            stlocid, StartSimp = self.SimpInDir([pt1,pt2])
+            endlocid, EndSimp = self.SimpInDir([pt2,pt1])
+            if not pt2 in StartSimp.points:
+                edgeindex = StartSimp.edgeids[stlocid]
+                LoopIn.weightlist[edgeindex] += wadd
+                leftpoint = StartSimp.points[(stlocid+2)%3]
+                CurrentSimp = StartSimp.simplices[stlocid]
+                leftptloc = CurrentSimp.LocalID(leftpoint)
+                while not CurrentSimp is EndSimp:
+                    ptcompare = CurrentSimp.points[(leftptloc+2)%3]
+                    indexadd = 0
+                    if not self.IsLeft(linepoints,ptcompare):
+                        indexadd = 1
+                    edgeindex = CurrentSimp.edgeids[(leftptloc+indexadd)%3]
+                    LoopIn.weightlist[edgeindex] += wadd
+                    leftpoint = CurrentSimp.points[(leftptloc+indexadd+2)%3]
+                    CurrentSimp = CurrentSimp.simplices[(leftptloc+indexadd)%3]
+                    leftptloc = CurrentSimp.LocalID(leftpoint)
+
+    #this returns the simplex (and local point id) that contains the first of linepoints, 
+    #and has the line (to the second point) passing through it
+    def SimpInDir(self,linepoints):
+        pt1 = linepoints[0]
+        pt2 = linepoints[1]
+        StartSimp = self.pointlist[pt1]
+        locpt = StartSimp.LocalID(pt1)
+        ptright = StartSimp.points[(locpt+1)%3]
+        ptleft = StartSimp.points[(locpt+2)%3]
+        while not ((not self.IsLeft([pt1,pt2],ptright)) and self.IsLeft([pt1,pt2],ptleft)):
+            StartSimp = StartSimp.simplices[(locpt+1)%3]
+            locpt = StartSimp.LocalID(pt1)
+            ptright = StartSimp.points[(locpt+1)%3]
+            ptleft = StartSimp.points[(locpt+2)%3]
+        return locpt, StartSimp
+
+    #This takes the central point in pttriple and adds in the weight of wadd to each of the radial edges starting
+    #from the edge that is part of the simplex bisected by pt1 and pt2, to the edge that is part of the simplex
+    #bisected by pt2 and pt3
+    def AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1):
+        pt1, pt2, pt3 = pttriple
+        indadd = 1
+        if not Boolin[1]:  indadd = 2 # curve right triggers this
+        stlocid, StartSimp = None, None
+        if Boolin[0][0]:
+            if not Boolin[1]:
+                StartSimp = Boolin[0][1][0]
+            else:
+                StartSimp = Boolin[0][1][1]
+            stlocid = StartSimp.LocalID(pt2)
+        else:
+            stlocid, StartSimp = self.SimpInDir([pt2,pt1])
+        endlocid, EndSimp = None, None
+        if Boolin[2][0]:
+            if not Boolin[1]:
+                EndSimp = Boolin[2][1][0]
+            else:
+                EndSimp = Boolin[2][1][1]
+            endlocid = EndSimp.LocalID(pt2)   
+        else:
+            endlocid, EndSimp = self.SimpInDir([pt2,pt3])
+        edgeindex = StartSimp.edgeids[(stlocid+indadd)%3]
+        LoopIn.weightlist[edgeindex] += wadd
+        CurrentSimp = StartSimp.simplices[(stlocid+indadd)%3]
+        ptloc = CurrentSimp.LocalID(pt2)
+        while not CurrentSimp is EndSimp:
+            edgeindex = CurrentSimp.edgeids[(ptloc+indadd)%3]
+            LoopIn.weightlist[edgeindex] += wadd
+            CurrentSimp = CurrentSimp.simplices[(ptloc+indadd)%3]
+            ptloc = CurrentSimp.LocalID(pt2)    
 
     #using ref pt, ix, iy, see if point is in simp.  if not, find edge intersection and then 
     # get adj simp, find ref point and dx,dy for shift that matches edge from simp.  Then calls self recursively
@@ -1089,7 +1180,7 @@ class triangulation2D(triangulation2D_Base):
                 if PP.color_weights:
                     cweights += new_cweights             
         else:  #looks nicer, but only works for a Delaunay triangulation
-            if not PP.experimental:
+            if not PP.DelaunayAdd:
                 for simp in self.simplist:
                     new_ttpatches, new_cweights = self.DelaunaySimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
                     ttpatches += new_ttpatches
@@ -1105,7 +1196,7 @@ class triangulation2D(triangulation2D_Base):
                         cweights += new_cweights
                 
         Pcollection = PatchCollection(ttpatches, fc="none", alpha=PP.alpha_tt, capstyle = 'butt', joinstyle = 'round', zorder=3)
-        if not PP.experimental:  Pcollection.set_linewidth(PP.linewidth_tt)
+        if not PP.DelaunayAdd:  Pcollection.set_linewidth(PP.linewidth_tt)
         else:  Pcollection.set_linewidth(line_widths)
             
         if not PP.color_weights: Pcollection.set_edgecolor(PP.linecolor_tt)

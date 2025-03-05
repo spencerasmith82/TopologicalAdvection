@@ -19,12 +19,20 @@ class simplex2D(simplex2D_Base):
     """
     Child class simplex2D extensions/notes:
 
+    Attributes (additional notes)
+    ----------
+    IsBoundarySimp: bool
+        IsBoundarySimp marks a simplex as being part of the boundary (True)
+        if all point are boundary points.  Default is False.  Set when 
+        generating the triangulation
+
     Methods (additional notes)
     -------
     SimpNeighbors(IDin)
         In the case of a boundary simplex (with None as one/two of the simplex
         neighbors), the list is not necessarily in CCW order.
     """
+    _added_docstring = False
     
     def __init__(self, IDlist):
         """
@@ -41,8 +49,9 @@ class simplex2D(simplex2D_Base):
         Other attributes are set when linking them up in a triangulation2D 
         object.
         """  
-        if simplex2D_Base._count == 0:
+        if not simplex2D._added_docstring:
             self.__class__.__doc__ = simplex2D_Base.__doc__ + "\n" + self.__class__.__doc__
+            simplex2D._added_docstring = True
         super().__init__(IDlist)
         self.IsBoundarySimp = False
 
@@ -151,13 +160,7 @@ class simplex2D(simplex2D_Base):
 @dataclass
 class PrintParameters(PrintParameters):
     boundary_points: bool = False
-    color_weights: bool = False
-    log_color: bool = True
-    color_map: str = 'inferno_r'
-    experimental: bool = False
-    tt_lw_min_frac: float = 0.05
-    conversion_factor: float = None
-    max_weight: int = None
+    ExpandedBounds: list = None
 
 
 
@@ -173,7 +176,7 @@ class triangulation2D(triangulation2D_Base):
         if not empty: self.SetControlPoints(ptlist)
         super().__init__(ptlist, empty)
         for simp in self.simplist:
-            boundary_simp = True:
+            boundary_simp = True
             for j in range(3):
                 if simp.points[j] < self.ptnum-self.extranum:
                     boundary_simp = False
@@ -282,7 +285,7 @@ class triangulation2D(triangulation2D_Base):
     
 
     #this function returns a pair [IsSoln, timeOut], where IsSoln is a boolian that is true if the first time at which the area goes through zero is between Tin and 1, and false if not.  For IsSoln == True, timeOut gives this time.
-    def AreaZeroTimeSingle(self,SimpIn,Tin = 0):
+    def AreaZeroTimeSingle(self, SimpIn, Tin = 0):
         #first get the beginning and end x,y coordinate for each of the three points
         ptlist = SimpIn.points
         IP0x, IP0y = self.pointpos[ptlist[0]]
@@ -415,7 +418,6 @@ class triangulation2D(triangulation2D_Base):
     
       
         
-
 
 
     # MakeDelaunay takes the current triangulation and, through a series of edge flips, changes it into the Delaunay triangulation for this point configuration.  This function changes the underlying triangulation
@@ -564,6 +566,101 @@ class triangulation2D(triangulation2D_Base):
         else:
             return [AreAdjacent,None]
 
+    def DoesCurveLeft(self,pttriple):
+        pt1, pt2, pt3 = pttriple
+        pos1 = self.pointpos[pt1]
+        pos2 = self.pointpos[pt2]
+        pos3 = self.pointpos[pt3]
+        crossP = (pos3[0] - pos2[0])*(pos1[1] - pos2[1]) - (pos3[1] - pos2[1])*(pos1[0] - pos2[0])
+        return crossP >= 0
+
+    #this determines if the given point (ptin) is to the left of line that goes from the first to second point in linepts
+    #Used in determining the edges crossed in an initial band
+    def IsLeft(self,linepts,ptin):
+        pttriple = [ptin,linepts[0], linepts[1]]
+        return self.DoesCurveLeft(pttriple)
+
+    #This takes the two points in linepoints and adds a weight of one (or non-default value) to any edges that are crossed
+    #by the line.
+    def AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
+        pt1, pt2 = linepoints
+        if Boolin[1][0]: #this is the case of adjacent points (i.e. the line between the points is an edge)
+            #only if the curvelefts' (Boolin[0], Boolin[2]) are opposite one another, do we add a weight
+            if Boolin[0] is not Boolin[2]:
+                pt1rtlocid = Boolin[1][1][1].LocalID(pt1)
+                edgeindex = Boolin[1][1][1].edgeids[(pt1rtlocid+1)%3]
+                LoopIn.weightlist[edgeindex] += wadd
+        else:
+            #first we need to determine the direction (which simplex) to set out from that has pt1 as a point.
+            stlocid, StartSimp = self.SimpInDir([pt1,pt2])
+            endlocid, EndSimp = self.SimpInDir([pt2,pt1])
+            if not pt2 in StartSimp.points:
+                edgeindex = StartSimp.edgeids[stlocid]
+                LoopIn.weightlist[edgeindex] += wadd
+                leftpoint = StartSimp.points[(stlocid+2)%3]
+                CurrentSimp = StartSimp.simplices[stlocid]
+                leftptloc = CurrentSimp.LocalID(leftpoint)
+                while not CurrentSimp is EndSimp:
+                    ptcompare = CurrentSimp.points[(leftptloc+2)%3]
+                    indexadd = 0
+                    if not self.IsLeft(linepoints,ptcompare):
+                        indexadd = 1
+                    edgeindex = CurrentSimp.edgeids[(leftptloc+indexadd)%3]
+                    LoopIn.weightlist[edgeindex] += wadd
+                    leftpoint = CurrentSimp.points[(leftptloc+indexadd+2)%3]
+                    CurrentSimp = CurrentSimp.simplices[(leftptloc+indexadd)%3]
+                    leftptloc = CurrentSimp.LocalID(leftpoint)
+
+    #this returns the simplex (and local point id) that contains the first of linepoints, 
+    #and has the line (to the second point) passing through it
+    def SimpInDir(self,linepoints):
+        pt1 = linepoints[0]
+        pt2 = linepoints[1]
+        StartSimp = self.pointlist[pt1]
+        locpt = StartSimp.LocalID(pt1)
+        ptright = StartSimp.points[(locpt+1)%3]
+        ptleft = StartSimp.points[(locpt+2)%3]
+        while not ((not self.IsLeft([pt1,pt2],ptright)) and self.IsLeft([pt1,pt2],ptleft)):
+            StartSimp = StartSimp.simplices[(locpt+1)%3]
+            locpt = StartSimp.LocalID(pt1)
+            ptright = StartSimp.points[(locpt+1)%3]
+            ptleft = StartSimp.points[(locpt+2)%3]
+        return locpt, StartSimp
+
+    #This takes the central point in pttriple and adds in the weight of wadd to each of the radial edges starting
+    #from the edge that is part of the simplex bisected by pt1 and pt2, to the edge that is part of the simplex
+    #bisected by pt2 and pt3
+    def AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1):
+        pt1, pt2, pt3 = pttriple
+        indadd = 1
+        if not Boolin[1]:  indadd = 2 # curve right triggers this
+        stlocid, StartSimp = None, None
+        if Boolin[0][0]:
+            if not Boolin[1]:
+                StartSimp = Boolin[0][1][0]
+            else:
+                StartSimp = Boolin[0][1][1]
+            stlocid = StartSimp.LocalID(pt2)
+        else:
+            stlocid, StartSimp = self.SimpInDir([pt2,pt1])
+        endlocid, EndSimp = None, None
+        if Boolin[2][0]:
+            if not Boolin[1]:
+                EndSimp = Boolin[2][1][0]
+            else:
+                EndSimp = Boolin[2][1][1]
+            endlocid = EndSimp.LocalID(pt2)   
+        else:
+            endlocid, EndSimp = self.SimpInDir([pt2,pt3])
+        edgeindex = StartSimp.edgeids[(stlocid+indadd)%3]
+        LoopIn.weightlist[edgeindex] += wadd
+        CurrentSimp = StartSimp.simplices[(stlocid+indadd)%3]
+        ptloc = CurrentSimp.LocalID(pt2)
+        while not CurrentSimp is EndSimp:
+            edgeindex = CurrentSimp.edgeids[(ptloc+indadd)%3]
+            LoopIn.weightlist[edgeindex] += wadd
+            CurrentSimp = CurrentSimp.simplices[(ptloc+indadd)%3]
+            ptloc = CurrentSimp.LocalID(pt2)    
 
     #using ref pt, see if point is in simp.  if not, find edge intersection and then 
     # get adj simp, find ref point and dx,dy for shift that matches edge from simp.  Then calls self recursively
@@ -599,8 +696,6 @@ class triangulation2D(triangulation2D_Base):
             edge = simp.edgeids[next_id]
             next_simp = simp.simplices[next_id]
             return [[simp, edge]] + self.Simp_Hop(pt_in, next_simp, line_big, edge_prev = edge)
-                                 
-        
     
     def Tri_Contains(self, pt, simp):
         vertices = np.array([copy.copy(self.pointpos[p]) for p in simp.points])
@@ -656,7 +751,11 @@ class triangulation2D(triangulation2D_Base):
     def PlotPrelims(self, PP: PrintParameters):
         szx = PP.FigureSizeX
         szy = szx
-        if PP.Bounds is not None:
+        #ExpandedBounds
+        if PP.boundary_points and PP.ExpandedBounds is not None:
+            szy = szx*(PP.ExpandedBounds[1][1] - PP.ExpandedBounds[0][1])/(PP.ExpandedBounds[1][0] - PP.ExpandedBounds[0][0])
+            szy += 1.0/PP.dpi*(int(szy*PP.dpi)%2)  #szy*dpi must be even
+        elif not PP.boundary_points and PP.Bounds is not None:
             szy = szx*(PP.Bounds[1][1] - PP.Bounds[0][1])/(PP.Bounds[1][0] - PP.Bounds[0][0])
             szy += 1.0/PP.dpi*(int(szy*PP.dpi)%2)  #szy*dpi must be even
         fig = plt.figure(figsize=(szx,szy), dpi=PP.dpi, frameon=False)
@@ -664,7 +763,10 @@ class triangulation2D(triangulation2D_Base):
         rcParams['savefig.pad_inches'] = 0
         #rcParams['path.simplify_threshold'] = 1.0  #to speed up plotting ... set smaller if needing higher quality
         ax.autoscale(tight=True)
-        if PP.Bounds is not None:
+        if PP.boundary_points and PP.ExpandedBounds is not None:
+            ax.set_xlim((PP.ExpandedBounds[0][0], PP.ExpandedBounds[1][0]))
+            ax.set_ylim((PP.ExpandedBounds[0][1], PP.ExpandedBounds[1][1]))
+        elif not PP.boundary_points and PP.Bounds is not None:
             ax.set_xlim((PP.Bounds[0][0], PP.Bounds[1][0]))
             ax.set_ylim((PP.Bounds[0][1], PP.Bounds[1][1]))
         ax.set_aspect('equal')
@@ -673,7 +775,8 @@ class triangulation2D(triangulation2D_Base):
         ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
         fig.tight_layout(pad=0)
         bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        PP.conversion_factor = (self.Domain[1][0]-self.Domain[0][0])/bbox.width/72
+        xlim = ax.get_xlim()
+        PP.conversion_factor = (xlim[1]-xlim[0])/bbox.width/72
         return fig, ax
 
     
@@ -682,7 +785,7 @@ class triangulation2D(triangulation2D_Base):
         if not PP.boundary_points:
             xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-self.extranum]]  #note that we exclude the bounding points
             ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-self.extranum]]
-            triangles = [x.points for x in self.simplist if not x.IsBoundarySimp]  #make sure that the list of triangles (triplets of points) do not include the excluded boundary
+            triangles = [x.points for x in self.simplist if (len(set(x.points).intersection([(len(self.pointpos)-y) for y in range(1,self.extranum+1)])) == 0)]  #make sure that the list of triangles (triplets of points) do not include the excluded boundary
             ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
         else:
             xpoints = [x[0] for x in self.pointpos]  
@@ -715,7 +818,7 @@ class triangulation2D(triangulation2D_Base):
                     if PP.color_weights:
                         cweights += new_cweights
         else:  #looks nicer, but only works for a Delaunay triangulation
-            if not PP.experimental:
+            if not PP.DelaunayAdd:
                 for simp in self.simplist:
                     if not simp.IsBoundarySimp:
                         new_ttpatches, new_cweights = self.DelaunaySimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
@@ -733,7 +836,7 @@ class triangulation2D(triangulation2D_Base):
                             cweights += new_cweights
                  
         Pcollection = PatchCollection(ttpatches, fc="none", alpha=PP.alpha_tt, capstyle = 'butt', joinstyle = 'round', zorder=3)
-        if not PP.experimental:  Pcollection.set_linewidth(PP.linewidth_tt)
+        if not PP.DelaunayAdd:  Pcollection.set_linewidth(PP.linewidth_tt)
         else:  Pcollection.set_linewidth(line_widths)
         if not PP.color_weights: Pcollection.set_edgecolor(PP.linecolor_tt)
         else:
