@@ -315,27 +315,23 @@ class triangulation2D(triangulation2D_Base):
 
         #The main method for evolving the Event List (group of simplices that need fixing)
     #remember that the list is sorted in decending order, and we deal with the last element first
-    def GEvolve(self,EventLists):
+    def GEvolve(self, EventLists):
         delta = 1e-10
-        while len(EventLists)> 0:            
-            neweventssimp = []  #new simpices to check
-            dellistsimp = []    #simplices to delete from the simplex event list if they exist in it
-            currenttime = EventLists[-1][1]
+        while len(EventLists) > 0:
+            CollSimp, currenttime = EventLists[-1]
             #deal with simplex collapse events here
-            modlist = self.SFix(EventLists[-1], currenttime - delta)    #returns ... [[leftsimp,rightsimp],topsimp (old)]
-            neweventssimp = modlist[0]
-            delsimp = modlist[1]
+            newsimps, delsimp = self.SFix(CollSimp, currenttime)    #returns ... [[leftsimp,rightsimp],topsimp (old)]
             del EventLists[-1]  #get rid of the evaluated event
-            #first find the time of zero area for core simplex event, and delete it if needed
-            AZT = self.AreaZeroTimeSingle(delsimp, currenttime - delta)
-            if AZT[0]:
-                HF.BinarySearchDel(EventLists, [delsimp,AZT[1]])
+            #now find the time of zero area for simplex event, and delete it if needed
+            collapsed, collapse_time = self.AreaZeroTimeSingle(delsimp, currenttime - delta)
+            if collapsed:
+                HF.BinarySearchDel(EventLists, [delsimp, collapse_time])
             #now run through the newevents list and see if each object goes through zero area in the remaining time (if so, add to EventList with the calulated time to zero area)
-            for i in range(0,len(neweventssimp)):
-                AZT = self.AreaZeroTimeSingle(neweventssimp[i], currenttime - delta)
-                if AZT[0]:
+            for simp in newsimps:
+                collapsed, collapse_time = self.AreaZeroTimeSingle(simp, currenttime - delta)
+                if collapsed:
                     #insert in the event list at the correct spot
-                    HF.BinarySearchIns(EventLists,[neweventssimp[i],AZT[1]]) 
+                    HF.BinarySearchIns(EventLists,[simp, collapse_time]) 
 
     
     #this returns the linearly interpolated positions of each point in ptlist (usually 3, but can handle other lengths) at the time 0 < teval < 1.
@@ -417,9 +413,6 @@ class triangulation2D(triangulation2D_Base):
         return [lsimp,rsimp]    
     
       
-        
-
-
     # MakeDelaunay takes the current triangulation and, through a series of edge flips, changes it into the Delaunay triangulation for this point configuration.  This function changes the underlying triangulation
     def MakeDelaunay(self,single = False):
         IsD, InteriorEdge, EdgeBSimps = None, None, None
@@ -747,11 +740,10 @@ class triangulation2D(triangulation2D_Base):
 
 
     #####Plotting
-        # PlotPrelims - the preliminary plotting settings.  returns the newly created figure and axes.
+    # PlotPrelims - the preliminary plotting settings.  returns the newly created figure and axes.
     def PlotPrelims(self, PP: PrintParameters):
         szx = PP.FigureSizeX
         szy = szx
-        #ExpandedBounds
         if PP.boundary_points and PP.ExpandedBounds is not None:
             szy = szx*(PP.ExpandedBounds[1][1] - PP.ExpandedBounds[0][1])/(PP.ExpandedBounds[1][0] - PP.ExpandedBounds[0][0])
             szy += 1.0/PP.dpi*(int(szy*PP.dpi)%2)  #szy*dpi must be even
@@ -770,7 +762,6 @@ class triangulation2D(triangulation2D_Base):
             ax.set_xlim((PP.Bounds[0][0], PP.Bounds[1][0]))
             ax.set_ylim((PP.Bounds[0][1], PP.Bounds[1][1]))
         ax.set_aspect('equal')
-        #ax.set_frame_on(False)
         ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
         ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
         fig.tight_layout(pad=0)

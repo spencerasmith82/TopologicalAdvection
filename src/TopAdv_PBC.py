@@ -584,7 +584,7 @@ class triangulation2D(triangulation2D_Base):
 
     #The main method for evolving the Event List (group of simplices that need fixing)
     #remember that the list is sorted in decending order, and we deal with the last element first
-    def GEvolve(self,EventLists):
+    def GEvolve(self, EventLists):
         EventListSimp, EventListCrossing = EventLists
         delta = 1e-10
         while len(EventListSimp)> 0 or len(EventListCrossing) > 0:
@@ -597,23 +597,19 @@ class triangulation2D(triangulation2D_Base):
                 
             if latestSimpEventTime < latestCrossingEventTime:
                 #here we deal with simplex collapse events
-                neweventssimp = []  #new simpices to check
-                dellistsimp = []    #simplices to delete from the simplex event list if they exist in it
-                currenttime = latestSimpEventTime
+                CollSimp, currenttime = EventListSimp[-1]
                 #deal with simplex collapse events here
-                modlist = self.SFix(EventListSimp[-1],currenttime)    #returns ... [[leftsimp,rightsimp],topsimp (old)]
-                neweventssimp = modlist[0]
-                delsimp = modlist[1]  
+                newsimps, delsimp = self.SFix(CollSimp, currenttime)    #returns ... [[leftsimp,rightsimp],topsimp (old)]
                 del EventListSimp[-1]  #get rid of the evaluated event
                 #first find the time of zero area for potential top simplex event, and delete it if it is in the eventlist
-                AZT = self.AreaZeroTimeSingle(delsimp,currenttime - delta)
-                if AZT[0]:
-                    HF.BinarySearchDel(EventListSimp, [delsimp,AZT[1]])
+                collapsed, collapse_time = self.AreaZeroTimeSingle(delsimp, currenttime - delta)
+                if collapsed:
+                    HF.BinarySearchDel(EventListSimp, [delsimp, collapse_time)
                 #now run through the newevents list and see if each object goes through zero area in the remaining time (if so, add to EventList with the calulated time to zero area)
-                for i in range(0,len(neweventssimp)):
-                    AZT = self.AreaZeroTimeSingle(neweventssimp[i],currenttime - delta)
-                    if AZT[0]:     #insert in the event list at the correct spot
-                        HF.BinarySearchIns(EventListSimp,[neweventssimp[i],AZT[1]])
+                for simp in newsimps:
+                    collapsed, collapse_time = self.AreaZeroTimeSingle(simp, currenttime - delta)
+                    if collapsed:     #insert in the event list at the correct spot
+                        HF.BinarySearchIns(EventListSimp,[simp, collapse_time])
             else:
                 #here we deal with the crossing events
                 currenttime = latestCrossingEventTime
@@ -1109,7 +1105,6 @@ class triangulation2D(triangulation2D_Base):
         ax = fig.gca()
         mplstyle.use('fast')
         rcParams['savefig.pad_inches'] = 0
-        #rcParams['path.simplify_threshold'] = 1.0  #to speed up plotting ... set smaller if needing higher quality
         ax.autoscale(tight=True)
         if PP.Bounds is not None:
             ax.set_xlim((PP.Bounds[0][0], PP.Bounds[1][0]))

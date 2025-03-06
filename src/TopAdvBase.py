@@ -676,20 +676,19 @@ class triangulation2D_Base(ABC):
         """
         pass
 
-    def SFix(self,SimpIn,timein):
-        #  Fixing a simplex and the surrounding affected simplices. SimpIn is
-        #  actually a list [simplex, area zero time].  This returns the two 
+    def SFix(self, SimpIn, tcollapse):
+        #  Fixing a simplex and the surrounding affected simplices. This returns the two 
         #  new simplices, so that they can be possibly added to the local event 
         #  list, also the bad simplex so it can be removed (if needed from the 
         #  local event list)
-        Simp = SimpIn[0]
+        
         #  `colind` is the local index of the offending point during the 
         #  area collapse
-        colind = self.CollapsePt(Simp,SimpIn[1]) 
-        Topsimp = Simp.simplices[colind]
-        edge_id = Simp.edgeids[colind]
-        globaltime = self.atstep + timein
-        newsimps = self.EdgeFlip([Simp,Topsimp], edge_id, globaltime)  
+        colind = self.CollapsePt(SimpIn, tcollapse) 
+        Topsimp = SimpIn.simplices[colind]
+        edge_id = SimpIn.edgeids[colind]
+        globaltime = self.atstep + tcollapse
+        newsimps = self.EdgeFlip([SimpIn,Topsimp], edge_id, globaltime)  
         #  EdgeFlip does most of the work in flipping the edge and 
         #  cleaning up linking
         return [newsimps,Topsimp]
@@ -718,14 +717,52 @@ class triangulation2D_Base(ABC):
     
     @abstractmethod
     def GetSimpCurrentLoc(self, SimpIn, tcol):
+        """
+        this returns the linearly interpolated positions of the three points
+        in SimpIn at time tcol
+        """
         pass
 
     @abstractmethod
     def EdgeFlip(self, AdjSimps, EdgeShare, TimeIn = None):
+        """
+        EdgeFlip locally re-triangulates the triangulation by removing an
+        edge that divides two adjacent triangles in a quadrilateral, and 
+        replaces it with the other diagonal of this quadrilateral.  This
+        removes the old simplices, creates new ones, and links them up in the
+        triangulation. EdgeFlip also creates the appropriate WeightOperator
+        object and adds it to the WeightOperator list.
+
+        Parameters
+        ----------
+        AdjSimps : list of 2 simplex2D objects
+            These are the two simplices that share the edge to be flipped
+
+        EdgeShare : int
+            The edge id of the edge to be flipped.  While this can almost 
+            always be found from AdjSimps, the redundancy helps in certain
+            cases.
+
+        TimeIn : float
+            This is the time when the event occured that required a flip.
+            It is added as part of the data in the WeightOperator object.
+
+        Returns
+        -------
+        list of 2 simplex2D objects
+            The two new simplices.  Returned so that the calling function
+            
+        """
         pass
     
     @abstractmethod
     def MakeDelaunay(self):
+        """
+        MakeDelaunay takes the current triangulation and, through a series
+        of edge flips, changes it into the Delaunay triangulation for this 
+        point configuration.  This function changes the underlying 
+        triangulation
+        """
         pass
     
     def OperatorAction(self, LoopIn, index = None, Reverse = False, 
@@ -912,7 +949,6 @@ class triangulation2D_Base(ABC):
         #  This finds the set of edges (in order) which correspond to a curve.
         pass
 
-    
     def ShearWeightInitialize(self, RegLoop, LoopIn):
         """
         This takes the regular edge weights (for some band) encoded in 
@@ -945,7 +981,7 @@ class triangulation2D_Base(ABC):
 
     def Plot(self, LoopIn = None, PP: PrintParameters = PrintParameters()):
         """
-        Plot plots the points, triangulation, and loop with a large variety
+        Plots the points, triangulation, and loops with a large variety
         of options specified in PrintParameters (see the documentation for 
         PrintParameters data class for more details).
 
@@ -957,33 +993,188 @@ class triangulation2D_Base(ABC):
 
         PP : PrintParameters data object
             All of the options for customizing the plot are wrapped up in
-            this data structure.
+            this data object.  The top-level attributes of PP that are used
+            in Plot are:
+
+        filename : str
+            The filename (including local path) to save the figure as.
+            If None (default), then then the figure is printed to screen.
+
+        triplot : bool
+            Flag - prints the background triangulation if True (default) and 
+            excludes it if False.
         """
-        fig, ax = self.PlotPrelims(PP)  # the preliminary plotting settings
-        if PP.triplot:  self.TriangulationPlotBase(ax, PP)  # the underlying triangulation
+        # the preliminary plotting settings
+        fig, ax = self.PlotPrelims(PP)
+        # the underlying triangulation
+        if PP.triplot:  self.TriangulationPlotBase(ax, PP)
         self.PointPlotBase(ax, PP)  # the points
-        if LoopIn is not None:  self.TTPlotBase(ax, LoopIn, PP) #only plot the traintrack if a Loop is given
+        #only plot the traintrack if a Loop is given
+        if LoopIn is not None:  self.TTPlotBase(ax, LoopIn, PP)
         if PP.filename is None:  plt.show()
         else:  plt.savefig(PP.filename)
         plt.close()
 
     @abstractmethod
     def PlotPrelims(self, PP: PrintParameters):
+        """
+        Handles the initial setup for the figure
+
+        Parameters
+        ----------
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        Bounds : list of lists
+            Bounds has the format [[x_min, y_min],[x_max, y_max]], and 
+            determines the bounding box for plotting. This is usually set
+            automatically.
+
+        FigureSizeX : float
+            The width of the image in inches.  The height is automatically 
+            calculated based on Bounds.
+
+        dpi : int
+            The dots per inch.  Increase to increase the resolution and size of 
+            resulting image file.
+
+        Returns
+        -------
+        fig : matplotlib fig object
+            Not currently used, but might be used in the future to
+            add another subplot
+
+        ax : matplotlib axis object
+            This is used to add features to the current plot
+        """
         pass
     
     @abstractmethod
     def TriangulationPlotBase(self, ax, PP: PrintParameters):
+        """
+        Plots the underlying triangulation
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        linewidth_tri : float
+            The line width of the background triangulation.
+
+        linecolor_tri : str
+            The color of the triangulation lines. Default is 'g' (green).    
+        """
         pass
         
     @abstractmethod
     def PointPlotBase(self, ax, PP: PrintParameters):
+        """
+        Plots the points
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        ptlabels : bool
+            If True, the integer label for each point is plotted next to the 
+            point. False is default.  Mainly used for visually finding groups 
+            of points to encircle with a band.
+
+        markersize : float
+            Sets the markersize of the points.
+        """
         pass
 
     @abstractmethod
     def TTPlotBase(self, ax, LoopIn, PP: PrintParameters):
+        """
+        Plots the train-track representation of the loop
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        LoopIn : Loop object
+            The data in LoopIn determine the train-track
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        Delaunay : bool
+            Flag - if True then uses Voronoi-based control points to draw the 
+            train-track representation of the loops.  If False (default), then
+            triangle centers are used as control points.
+
+        DelaunayAdd : bool
+            Flag - A different Voronoi-based control point plotting system for
+            the train-tracks.  This represents the train-track weights as line 
+            widths, which join naturally at train-track switch locations. This
+            is only relevant if Delaunay is True.
+
+        color_weights : bool
+            If True, then the individual segments of the train-track will be 
+            colored based on their weights.  This is one way to encode weight
+            information in the plots.  Default is False.
+    
+        log_color : bool
+            If True these colors will be assigned using the log of the 
+            weights. If False (default), the weights them-selves will 
+            determine the color scale.
+        
+        color_map : str
+            The color map to be used, default is 'inferno_r'.
+    
+        linewidth_tt : float
+            The line width of the train-track.  If DelaunayAdd is True, then
+            this is the maximum line-width
+    
+        linecolor_tt : str
+            The line color of the train-track. Default is 'r' (red).
+    
+        alpha_tt : float
+            The opacity of the train-track.  Default is 1.0 (completely 
+            opaque/not transparent).
+    
+        frac : float
+            For plotting with the Delaunay flag, this determined how curved 
+            the train-tracks appear.  A value of 1.0 is maximally curvy (no 
+            linear segments), while a value of 0.0 would be just straight 
+            lines on following the Voronoi skeleton.  Default is 0.9
+    
+        tt_lw_min_frac : float
+            The minimum fraction of linewidth_tt that will be represented.  
+            This means that all train-track segments with weights below this
+            fraction of the maximum weight will be represented as this 
+            fraction of linewidth_tt.  All segments with larger weight will 
+            have a line width that linear in this range.
+        """
         pass
 
     @abstractmethod
     def TriCopy(self, EvolutionReset = True):
-        pass
+        """
+        Creates a copy of this triangulation2D object.  Custom, as a 
+        deepcopy is not sufficient.
 
+        Parameters
+        ----------
+        EvolutionReset : bool
+            If True (default), then the WeightOperatorList is reset to
+            be an empty list.  i.e. the memory of any past evolution 
+            is ignored.
+
+        Returns
+        -------
+        triangulation2D object
+            Returns a copy of this triangulation2D object
+        """
+        pass
