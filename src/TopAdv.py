@@ -14,25 +14,57 @@ from matplotlib.collections import PatchCollection, LineCollection
 from matplotlib import rcParams
 from dataclasses import dataclass
 
+
 # simplex2D class ############################################################
 class simplex2D(simplex2D_Base):
-    """
-    Child class simplex2D extensions/notes:
+    """Class representing a triangle / 2D simplex 
+        (used in a 2D triangulation object)
 
-    Attributes (additional notes)
+    Attributes
     ----------
+    points : list of 3 ints
+        List of the 3 vertex point IDs. These IDs will be used to get the 
+        vertex spatial locations from a master list that is a triangulation2D
+        attribue. Note that the order is only unique up to an even 
+        permutation. The permuation given on initialization is assumed to 
+        correspond to a set of geometric points that are given in counter 
+        clock-wise, CCW, order. Moving about this list (and other simplex2D 
+        attributes) is done via modular arithmatic: (i+1)%3 to move CCW about
+        the simplex from index i, and (i+2)%3 to move CW.
+
+    simplices : list of 3 simplex objects
+        List of the 3 simplices adjacent to this simplex. Convention: simplex
+        at position i in this list is adjacent to this simplex at the edge 
+        across from self.points[i]
+
+    edgeids : list of 3 ints
+        List of the 3 edge ids. Each edge has an identifying integer that is
+        used when keeping track of loop coordinates (in loop class).
+
+    SLindex : int
+        ID of this simplex in a Simplex List attribute of triangulation2D 
+        (simplist). This is useful for going back and forth from the local 
+        view (simplex2D object) and the global view (triangulation2D object)
+
     IsBoundarySimp: bool
         IsBoundarySimp marks a simplex as being part of the boundary (True)
         if all point are boundary points.  Default is False.  Set when 
         generating the triangulation
 
-    Methods (additional notes)
+    Methods
     -------
+    LocalID(IDin)
+        Given the ID (IDin) of a vertex/point in this triangle, this returns 
+        the local ID, i.e. the integer i = 0,1,2 s.t. self.points[i] = IDin
+
     SimpNeighbors(IDin)
-        In the case of a boundary simplex (with None as one/two of the simplex
-        neighbors), the list is not necessarily in CCW order.
+        Find the simplices about a given point. In the case of a boundary 
+        simplex (with None as one/two of the simplex neighbors), the list
+        is not necessarily in CCW order.
+
+    SimpLink(S_other)
+        Link self with S_other simplex
     """
-    _added_docstring = False
     
     def __init__(self, IDlist):
         """
@@ -49,14 +81,11 @@ class simplex2D(simplex2D_Base):
         Other attributes are set when linking them up in a triangulation2D 
         object.
         """  
-        if not simplex2D._added_docstring:
-            self.__class__.__doc__ = simplex2D_Base.__doc__ + "\n" + self.__class__.__doc__
-            simplex2D._added_docstring = True
         super().__init__(IDlist)
         self.IsBoundarySimp = False
 
     def SimpNeighbors(self, IDin):
-        """Finds the simpices which share a point.
+        """Finds the set of simpices which share a point.
 
         Parameters
         ----------
@@ -156,51 +185,225 @@ class simplex2D(simplex2D_Base):
 # End of simplex2D class #####################################################
 
 
-#need to decide what to include in the PrintParameters 
+# PrintParameters Class ######################################################
 @dataclass
 class PrintParameters(PrintParameters):
+    """Class containing all of the parameters used in printing the 
+    triangulation and loops, and their default values.
+
+    Attributes
+    ----------
+    filename : str
+        The filename (including local path) to save the figure as.
+        If None (default), then then the figure is printed to screen.
+
+    triplot : bool
+        Flag - prints the background triangulation if True (default) and 
+        excludes it if False.
+
+    Delaunay : bool
+        Flag - if True then uses Voronoi-based control points to draw the 
+        train-track representation of the loops.  If False (default), then
+        triangle centers are used as control points.
+
+    DelaunayAdd : bool
+        Flag - A different Voronoi-based control point plotting system for 
+        the train-tracks.  This represents the train-track weights as line 
+        widths, which join naturally at train-track switch locations. This
+        is only relevant if Delaunay is True.
+
+    Bounds : list of lists
+        Bounds has the format [[x_min, y_min],[x_max, y_max]], and determines
+        the bounding box for plotting.  This is usually set automatically.
+
+    FigureSizeX : float
+        The width of the image in inches.  The height is automatically 
+        calculated based on Bounds.
+
+    dpi : int
+        The dots per inch.  Increase to increase the resolution and size of 
+        resulting image file.
+
+    ptlabels : bool
+        If True, the integer label for each point is plotted next to the 
+        point. False is default.  Mainly used for visually finding groups of
+        points to encircle with a band.
+
+    markersize : float
+        Sets the markersize of the points.
+
+    linewidth_tri : float
+        The line width of the background triangulation.
+
+    linecolor_tri : str
+        The color of the triangulation lines. Default is 'g' (green).
+
+    color_weights : bool
+        If True, then the individual segments of the train-track will be 
+        colored based on their weights.  This is one way to encode weight
+        information in the plots.  Default is False.
+
+    log_color : bool
+        If True these colors will be assigned using the log of the weights. If
+        False (default), the weights them-selves will determine the color 
+        scale
+    
+    color_map : str
+        The color map to be used, default is 'inferno_r'.
+
+    linewidth_tt : float
+        The line width of the train-track.  If DelaunayAdd is True, then this 
+        is the maximum line-width
+
+    linecolor_tt : str
+        The line color of the train-track. Default is 'r' (red).
+
+    alpha_tt : float
+        The opacity of the train-track.  Default is 1.0 (completely 
+        opaque/not transparent).
+
+    frac : float
+        For plotting with the Delaunay flag, this determined how curved the 
+        train-tracks appear.  A value of 1.0 is maximally curvy (no linear 
+        segments), while a value of 0.0 would be just straight lines on 
+        following the Voronoi skeleton.  Default is 0.9
+
+    tt_lw_min_frac : float
+        The minimum fraction of linewidth_tt that will be represented.  This
+        means that all train-track segments with weights below this fraction 
+        of the maximum weight will be represented as this fraction of 
+        linewidth_tt.  All segments with larger weight will have a line width
+        that linear in this range.
+
+    boundary_points : bool
+        If true, this sets a larger boundary (in ExpandedBounds), which 
+        included the boundary control points.  Default is False.
+
+    ExpandedBounds : list
+        A larger boundary that includes the control points.
+    """    
     boundary_points: bool = False
     ExpandedBounds: list = None
-
+# End of PrintParameters Class ###############################################
 
 
 # triangulation2D Class ######################################################
-#This is the triangulation class, the central class in the overall algorithm. It is initialized using a Delaunay triangulation
 class triangulation2D(triangulation2D_Base):
-    #The constructor for triangulation2D.  ptlist is the list of [x,y] positions for the points at the initial time.
-    #Domain = [[x_min,y_min],[x_max,y_max]] The data point must be contained within this rectangular boundary at all times.
+    """The central class in the overal Topological Advection algorithm, this
+    class represents a triangulation of data points in a 2D domain.  It has
+    methods for evolving the triangulation due to the motion of data points,
+    acting as a basis for encoding loops, accumulating weight operators, and
+    plotting.  This child of the parent triangulation2D_Base class works for 
+    points on a 2D domain where the boundary is known (pts remain bounded).
+
+    Note: Only the main attribues and methods are listed here.
+    Note: The triangulation is initialized as a Delaunay triangulation.
+
+    Attributes:
+    -----------
+    
+    pointlist : list
+        A list of simplex objects.  Object at index i has the point with 
+        point id i in its point list.  Allows for O(1) lookup of points in the
+        triangulation.  Note, not every simplex is in this list.
+
+    pointpos : list
+        A list of the [x,y] positions for the points at the current time
+
+    pointposfuture : list
+        List of the [x,y] positions at the next time step.  Used with the 
+        Evolution method.
+
+    simplist : list
+        List of all of the simplices that make up the triangulation.  
+        Individual simplices have an id (SLindex) that indicates their 
+        location in this list.
+        
+    WeightOperatorList : list
+        List of WeightOperator objects.  As the triangulation is evolved 
+        forward due to point motions, retriangulations with edge flips are
+        needed.  For each flip, we record the data needed to evolve a loop 
+        forward.  This list is ordered (increasing) in time.
+
+    Domain : list
+        The rectangular domain that bounds the points.  This is used to set
+        the boundary control points.  The format is:
+        [[x_min, y_min],[x_max, y_max]]
+
+    
+    Methods:
+    --------
+
+    Evolve(ptlist, Maintain_Delaunay = False)
+        This evolves the triangulation forward due to the motion of the points
+        - new point positions in ptlist. Options for evolution via collapse 
+        events or to maintain a Delaunay triangulation.  For every edge flip
+        needed, a WeightOperator is added to the WeightOperator list.
+
+    OperatorAction(LoopIn, index = None, Reverse = False, option = 3)
+        This evolves forward an individual loop object (i.e. updates its 
+        weightlist due to the action of the WeightOperators in 
+        WeightOperatorList).
+
+    Plot(LoopIn = None, PP: PrintParameters = PrintParameters())
+        This plots the triangulation and loop.  See PrintParameters data class
+        documentation for details on the many options.
+
+    TriCopy(EvolutionReset = True)
+        This returns a copy of this triangulation2D object.
+    """
     def __init__(self, ptlist, Domain = None, empty = False):
-        self.extrapoints = []
-        self.extranum = 0
+        """
+        Parameters
+        ----------
+        ptlist : list
+            ptlist is the list of [x,y] positions for the points at the 
+            initial time.
+
+        Domain : list
+            Domain = [[x_min,y_min],[x_max,y_max]]. The data points must be
+            contained within this rectangular boundary at all times.  If 
+            None (Default), then this will be calculated from the max/min
+            x/y values of the input ptlist.  Domain is used to generate the
+            boundary control points.
+
+        empty : bool
+            Used for creating an empty object, which is then used for object 
+            copying.  Default is False
+        """
+        self._extrapoints = []
+        self._extranum = 0
         self.Domain = Domain
-        if not empty: self.SetControlPoints(ptlist)
+        if not empty: self._SetControlPoints(ptlist)
         super().__init__(ptlist, empty)
         for simp in self.simplist:
             boundary_simp = True
             for j in range(3):
-                if simp.points[j] < self.ptnum-self.extranum:
+                if simp.points[j] < self._ptnum-self._extranum:
                     boundary_simp = False
                     break
             if boundary_simp:
                 simp.IsBoundarySimp = True
 
-
-    def SetControlPoints(self, ptlist):
+    def _SetControlPoints(self, ptlist):
+        #  This sets the boundary control points based on the specified Domain
+        #  Two concentric rectangles are created with linear point density
+        #  equal to that of the ptlist data.
         if self.Domain is None:
             self.Domain = HF.GetBoundingDomainSlice(ptlist, frac = 0.1)
-        #now find number of points along x and y boundary lines
+        #  now find number of points along x and y boundary lines
         npts = len(ptlist)
         Deltax = (self.Domain[1][0] - self.Domain[0][0])
         Deltay = (self.Domain[1][1] - self.Domain[0][1])
         a_ratio = Deltax/Deltay
         npts_x = int(np.sqrt(npts*a_ratio))
         npts_y = int(npts/npts_x)
-        #npts_x*npts_y = npts
-        #npts_x = a_ratio*npts_y
         dx = Deltax/(npts_x-1)
         dy = Deltay/(npts_y-1)
         delta = 1e-6*min(dx,dy)
         x_set = np.linspace(self.Domain[0][0], self.Domain[1][0], num=npts_x, endpoint=True)
+        #  note: the arrays with a sqrt are used to force the outer rectangle
+        #  to break degeneracy and be convex.
         x_sety = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_x, endpoint=True)))*delta
         y_set = np.linspace(self.Domain[0][1], self.Domain[1][1], num=npts_y, endpoint=True)
         y_setx = np.sqrt(1.0-np.abs(np.linspace(-1.0, 1.0, num=npts_y, endpoint=True)))*delta
@@ -216,94 +419,136 @@ class triangulation2D(triangulation2D_Base):
         Right1 = [[self.Domain[1][0] + y_setx[i], y_set[i]] for i in range(1,len(y_set)-1)]
         Left2 = [[self.Domain[0][0] - dx/2 - y_setx2[i], y_set2[i]] for i in range(1,len(y_set2)-1)]
         Right2 = [[self.Domain[1][0] + dx/2 + y_setx2[i], y_set2[i]] for i in range(1,len(y_set2)-1)]
-        self.extrapoints = Top1 + Bot1 + Top2 + Bot2 + Left1 + Right1 + Left2 + Right2
-        self.extranum = len(self.extrapoints)
-        self.ptnum = len(ptlist) + self.extranum
+        self._extrapoints = Top1 + Bot1 + Top2 + Bot2 + Left1 + Right1 + Left2 + Right2
+        self._extranum = len(self._extrapoints)
+        self._ptnum = len(ptlist) + self._extranum
 
     
-    def LoadPos(self,ptlist):
-        self.pointpos = ptlist + self.extrapoints  #combining the bounding simplex points with the regular points' positions (adding the extra point to the end rather than the begining is dicated by plotting concerns later)
+    def _LoadPos(self,ptlist):
+        #  Combining the bounding simplex points with the regular points' 
+        #  positions (adding the extra point to the end rather than the 
+        #  begining is dicated by plotting concerns)
+        self.pointpos = ptlist + self._extrapoints  
 
-    def SetInitialTriangulation(self):
-        temppoints = np.array(self.pointpos)  #put the total point set (regular plus large bounding simplex) into numpy array form
-        temptri = Delaunay(temppoints,qhull_options="QJ Pp")   #create the initial Delaunay triangulation.  The option forces the creation of simplices for degenerate points by applying a random perturbation.
-
-        #Now we need to store the triangulation data in a local data structure 
-        numsimp = temptri.simplices.shape[0]   #the number of simplices in the triangulation
+    def _SetInitialTriangulation(self):
+        #  This takes the set of points (including boundary control points),
+        #  calculates the Delaunay Triangulation, creates and links the 
+        #  simplices, creates the pointlist, and sets the simplex edge ids
+        temppoints = np.array(self.pointpos)
+        #  create the initial Delaunay triangulation.  The option forces the 
+        #  creation of simplices for degenerate points by applying a random 
+        #  perturbation.
+        temptri = Delaunay(temppoints,qhull_options="QJ Pp")
+        numsimp = temptri.simplices.shape[0]
         self.simplist = []
-
-        #first create the list of simplex2D objects (not linked together yet ... need to create every object first)
+        #  first create the list of simplex2D objects 
+        #  not linked together yet - need to create every object first
         for i in range(numsimp):
             self.simplist.append(simplex2D(temptri.simplices[i].tolist()))
             self.simplist[-1].SLindex = i
-
-        #now create the links
+        #  now create the links
         for i in range(numsimp):
             linklist = temptri.neighbors[i].tolist()
             for j in range(0,len(linklist)):
+                #  if -1 then the simplex already points to None 
+                #  true for neighbors of boundary simplices
                 if not linklist[j] == -1:
-                    self.simplist[i].simplices[j] = self.simplist[linklist[j]]    #if -1 then the simplex already points to None (true for neighbors of boundary simplices)
+                    self.simplist[i].simplices[j] = self.simplist[linklist[j]]
+        self._SetPointList()
+        self._SetEdgeIds()
 
-        self.SetPointList()
-        self.SetEdgeIds()
-
-
-    def SetPointList(self):
-        #now create the pointlist with links to individual simplices
-        #first initialize the list
-        self.pointlist = []
-        for i in range(self.ptnum):
-            self.pointlist.append(None)
-        #now go through each simplex and add that simplex to each slot in the pointlist that corresponds to an included point if the slot contains None (possibly more efficient way to do this)
-        for i in range(len(self.simplist)):
+    def _SetPointList(self):
+        #  creates the pointlist with links to individual simplices
+        self.pointlist = [None for i in range(self._ptnum)]
+        #  Go through each simplex and add that simplex to each slot in the 
+        #  pointlist that corresponds to an included point if the slot 
+        #  contains None (possibly more efficient way to do this)
+        for simp in self.simplist:
             for j in range(3):
-                 if self.pointlist[self.simplist[i].points[j]] is None:
-                        self.pointlist[self.simplist[i].points[j]] = self.simplist[i]
+                if self.pointlist[simp.points[j]] is None:
+                    self.pointlist[simp.points[j]] = simp
 
-    def SetEdgeIds(self):
-        #Now we assign each edge an index (will do this for all options for consistency).  This goes through each simplex object, and assigns an id to each edge (and the same id to the corresponding edge in the adjacent simplex) if it has not already been assigned.  The index is just taken from an incremental counter.
+    def _SetEdgeIds(self):
+        #  Assign each edge an index.  
+        #  The index is just taken from an incremental counter.
         edgecounter = 0
-        for i in range(0,len(self.simplist)):
-            for j in range(0,3):
-                tempsimp = self.simplist[i]
-                if tempsimp.edgeids[j] is None:
-                    tempsimp.edgeids[j] = edgecounter
-                    if not tempsimp.simplices[j] is None:
-                        pt = tempsimp.points[(j+1)%3]
-                        Lid = (tempsimp.simplices[j].LocalID(pt)+1)%3
-                        tempsimp.simplices[j].edgeids[Lid] = edgecounter
+        for simp in self.simplist:
+            for j in range(3):
+                if simp.edgeids[j] is None:
+                    simp.edgeids[j] = edgecounter
+                    if not simp.simplices[j] is None:
+                        pt = simp.points[(j+1)%3]
+                        Lid = (simp.simplices[j].LocalID(pt)+1)%3
+                        simp.simplices[j].edgeids[Lid] = edgecounter
                     edgecounter += 1  
-        self.totalnumedges = edgecounter 
+        self._totalnumedges = edgecounter 
 
+    def _LoadNewPos(self, ptlist):
+        self._LoadPos(ptlist)
 
-    def LoadNewPos(self, ptlist):
-        self.pointposfuture = ptlist + self.extrapoints
-
-
-    def GetEvents(self):
-        return self.GetCollapseEvents()
+    def _GetEvents(self):
+        #  Note that this wraps GetCollapseEvents so that it has the
+        #  same signature at for the TopAdv_PBC case
+        return self._GetCollapseEvents()
     
+    def _AreaZeroTimeSingle(self, SimpIn, Tin = 0):
+        """
+        Finds whether (and when) a triangle (simp) goes through zero area.
 
-    #this function returns a pair [IsSoln, timeOut], where IsSoln is a boolian that is true if the first time at which the area goes through zero is between Tin and 1, and false if not.  For IsSoln == True, timeOut gives this time.
-    def AreaZeroTimeSingle(self, SimpIn, Tin = 0):
-        #first get the beginning and end x,y coordinate for each of the three points
+        Parameters
+        ----------
+        simp : simplex2D object
+            The simplex to consider.
+
+        Tin : float
+            The lower bound on the time window to consider.
+
+        Returns
+        -------
+        list
+            Returns a pair [IsSoln, TimeOut], where IsSoln is a boolean that 
+            is True if the first time at which the area goes through zero is 
+            between Tin and 1, and False if not. For IsSoln == True, 
+            TimeOut gives this time.
+        """
+        #  Get the start and end x,y coordinate for each of the three points
         ptlist = SimpIn.points
         IP0x, IP0y = self.pointpos[ptlist[0]]
         IP1x, IP1y = self.pointpos[ptlist[1]]
         IP2x, IP2y = self.pointpos[ptlist[2]]
-        FP0x, FP0y = self.pointposfuture[ptlist[0]]
-        FP1x, FP1y = self.pointposfuture[ptlist[1]]
-        FP2x, FP2y = self.pointposfuture[ptlist[2]]
-        return  HF.AreaZeroTimeBaseSingle(IP0x, IP0y, IP1x, IP1y, IP2x, IP2y, FP0x, FP0y, FP1x, FP1y, FP2x, FP2y, Tin)
+        FP0x, FP0y = self._pointposfuture[ptlist[0]]
+        FP1x, FP1y = self._pointposfuture[ptlist[1]]
+        FP2x, FP2y = self._pointposfuture[ptlist[2]]
+        return  HF.AreaZeroTimeBaseSingle(IP0x, IP0y, IP1x, IP1y, IP2x, IP2y,
+                                          FP0x, FP0y, FP1x, FP1y, FP2x, FP2y,
+                                          Tin)
 
-    #this goes through every simplex and looks for whether the area zero time is between Tin and 1.  
-    def AreaZeroTimeMultiple(self,Tin = 0):
+    def _AreaZeroTimeMultiple(self,Tin = 0):
+        """
+        Goes through every simplex and looks for whether the area zero time
+        is between Tin and 1.  Similar to AreaZeroTimeSingle, but wrapping up
+        the info in numpy arrays to get vectorization and jit boost.
+
+        Parameters
+        ----------
+        Tin : float
+            The lower bound on the time window to consider.
+
+        Returns
+        -------
+        list
+            list of booleans, indicating whether the simplex (with this 
+            index) collapsed within the interval.
+
+        list
+            list of floats, giving the collapse times.
+        """
         nsimps = len(self.simplist)
         pts0 = np.array([self.simplist[i].points[0] for i in range(nsimps)])
         pts1 = np.array([self.simplist[i].points[1] for i in range(nsimps)])
         pts2 = np.array([self.simplist[i].points[2] for i in range(nsimps)])
         npptpos = np.array(self.pointpos)
-        npptposf = np.array(self.pointposfuture)
+        npptposf = np.array(self._pointposfuture)
         IP0x, IP0y = npptpos[pts0,0], npptpos[pts0,1]
         IP1x, IP1y = npptpos[pts1,0], npptpos[pts1,1]
         IP2x, IP2y = npptpos[pts2,0], npptpos[pts2,1]
@@ -312,90 +557,117 @@ class triangulation2D(triangulation2D_Base):
         FP2x, FP2y = npptposf[pts2,0], npptposf[pts2,1]
         return HF.AreaZeroTimeBaseVec(IP0x, IP0y, IP1x, IP1y, IP2x, IP2y, FP0x, FP0y, FP1x, FP1y, FP2x, FP2y, Tin)
 
-
-        #The main method for evolving the Event List (group of simplices that need fixing)
-    #remember that the list is sorted in decending order, and we deal with the last element first
-    def GEvolve(self, EventLists):
+    def _GEvolve(self, EventLists):
+        """
+        Processes an ordered list of events (collapse) and does edge flips to 
+        update the triangulation.  Also adds in new events as needed. Finished
+        when there are no more events in the time interval, and the 
+        triangulation is consistent with the new set of points.
+        """
         delta = 1e-10
         while len(EventLists) > 0:
             CollSimp, currenttime = EventLists[-1]
-            #deal with simplex collapse events here
-            newsimps, delsimp = self.SFix(CollSimp, currenttime)    #returns ... [[leftsimp,rightsimp],topsimp (old)]
-            del EventLists[-1]  #get rid of the evaluated event
-            #now find the time of zero area for simplex event, and delete it if needed
-            collapsed, collapse_time = self.AreaZeroTimeSingle(delsimp, currenttime - delta)
+            #  deal with simplex collapse events here
+            newsimps, delsimp = self._SFix(CollSimp, currenttime) 
+            #  returns ... [[leftsimp,rightsimp],topsimp (old)]
+            del EventLists[-1]  #  get rid of the evaluated event
+            #  Find the time of zero area for simplex event
+            collapsed, collapse_time = self._AreaZeroTimeSingle(delsimp, currenttime - delta)
             if collapsed:
+                #  and delete it if needed
                 HF.BinarySearchDel(EventLists, [delsimp, collapse_time])
-            #now run through the newevents list and see if each object goes through zero area in the remaining time (if so, add to EventList with the calulated time to zero area)
+            #  Go through the newsimps list and see if each object goes 
+            #  through zero area in the remaining time (if so, add to 
+            #  EventList with the calulated time to zero area)
             for simp in newsimps:
-                collapsed, collapse_time = self.AreaZeroTimeSingle(simp, currenttime - delta)
+                collapsed, collapse_time = self._AreaZeroTimeSingle(simp, currenttime - delta)
                 if collapsed:
-                    #insert in the event list at the correct spot
+                    #  insert in the event list at the correct spot
                     HF.BinarySearchIns(EventLists,[simp, collapse_time]) 
 
-    
-    #this returns the linearly interpolated positions of each point in ptlist (usually 3, but can handle other lengths) at the time 0 < teval < 1.
-    def GetSimpCurrentLoc(self, SimpIn, teval):
+    def _GetSimpCurrentLoc(self, SimpIn, teval):
+        #  This returns the linearly interpolated positions of each point in
+        #  SimpIn at the time 0 < teval < 1.
         ptlist = SimpIn.points
-        return [self.GetCurrentLoc(pt_ind, teval) for pt_ind in ptlist]
+        return [self._GetCurrentLoc(pt_ind, teval) for pt_ind in ptlist]
 
-    def GetCurrentLoc(self, pt_ind, teval):
+    def _GetCurrentLoc(self, pt_ind, teval):
         posi = self.pointpos[pt_ind]
-        posf = self.pointposfuture[pt_ind]
+        posf = self._pointposfuture[pt_ind]
         return [((posf[k]-posi[k])*teval + posi[k]) for k in range(2)]
 
+    def _EdgeFlip(self, AdjSimps, EdgeShare, TimeIn = None):
+        """
+        EdgeFlip locally re-triangulates the triangulation by removing an
+        edge that divides two adjacent triangles in a quadrilateral, and 
+        replaces it with the other diagonal of this quadrilateral.  This
+        removes the old simplices, creates new ones, and links them up in the
+        triangulation. EdgeFlip also creates the appropriate WeightOperator
+        object and adds it to the WeightOperator list.
 
-    def EdgeFlip(self, AdjSimps, EdgeShare, TimeIn = None):
-        #first get the local ids of the points not shared by these simplices
-        Simp = AdjSimps[0]
-        Topsimp = AdjSimps[1]
-        
+        Parameters
+        ----------
+        AdjSimps : list of 2 simplex2D objects
+            These are the two simplices that share the edge to be flipped
+
+        EdgeShare : int
+            The edge id of the edge to be flipped.  While this can almost 
+            always be found from AdjSimps, the redundancy helps in certain
+            cases.
+
+        TimeIn : float
+            This is the time when the event occured that required a flip.
+            It is added as part of the data in the WeightOperator object.
+
+        Returns
+        -------
+        list of 2 simplex2D objects
+            The two new simplices.  Returned so that the calling function
+        """
+        Simp, Topsimp = AdjSimps
+        #  local ids
         bptlid = Simp.edgeids.index(EdgeShare)          
         bpt = Simp.points[bptlid]
         rptlid = (bptlid+1)%3
         lptlid = (bptlid+2)%3
         rpt = Simp.points[rptlid]
         lpt = Simp.points[lptlid]
-        
         tptuid = Topsimp.edgeids.index(EdgeShare)
         tpt = Topsimp.points[tptuid]
         lptuid = (tptuid+1)%3
         rptuid = (tptuid+2)%3
-        
-        rslist = [bpt,rpt,tpt]
-        lslist = [bpt,tpt,lpt]
-        rsimp = simplex2D(rslist)  #new right simplex
-        lsimp = simplex2D(lslist)  #new left simplex
-        #create the list of edge ids for the weight operator
-        WeightIDs = [EdgeShare, Topsimp.edgeids[lptuid], Topsimp.edgeids[rptuid], Simp.edgeids[rptlid], Simp.edgeids[lptlid]]
-        #create the weight operater and append to the list
+        #  create the new simplices
+        rsimp = simplex2D([bpt,rpt,tpt])  #  new right simplex
+        lsimp = simplex2D([bpt,tpt,lpt])  #  new left simplex
+        #  create the list of edge ids for the weight operator
+        WeightIDs = [EdgeShare, Topsimp.edgeids[lptuid], 
+                     Topsimp.edgeids[rptuid], Simp.edgeids[rptlid],
+                     Simp.edgeids[lptlid]]
+        #  create the weight operater and append to the list
         self.WeightOperatorList.append(WeightOperator(WeightIDs,TimeIn))
-
-        #create the links these simplices have to other simplices
+        #  create the links these simplices have to other simplices
         rsimp.SimpLink(Topsimp.simplices[lptuid])
         lsimp.SimpLink(Topsimp.simplices[rptuid])
         rsimp.SimpLink(Simp.simplices[lptlid])
         lsimp.SimpLink(Simp.simplices[rptlid])
         rsimp.SimpLink(lsimp)
-        
-        #also need to reassign the weight ids
-        rsimp.edgeids[0] = WeightIDs[1]  #for all of these, we know which points the local ids correspond to
+        #  reassign the weight ids
+        rsimp.edgeids[0] = WeightIDs[1]
         rsimp.edgeids[1] = WeightIDs[0]
         rsimp.edgeids[2] = WeightIDs[4]
         lsimp.edgeids[0] = WeightIDs[2]
         lsimp.edgeids[1] = WeightIDs[3]
         lsimp.edgeids[2] = WeightIDs[0]
-        
-        #replace the two bad simplices in the simplex list with the two new ones
+        #  replace the two bad simplices in the simplex list
+        #  with the two new ones
         Simpindex = Simp.SLindex
         self.simplist[Simpindex] = lsimp
         lsimp.SLindex = Simpindex
-        
         Topsimpindex = Topsimp.SLindex
         self.simplist[Topsimpindex] = rsimp
         rsimp.SLindex = Topsimpindex
-                
-        #look through the simplex point list to see if either of the bad simplices were there and replace if so
+        #  look through the simplex point list to see if either of the 
+        #  bad simplices were there and if so, replace.
         if self.pointlist[bpt] is Simp:
             self.pointlist[bpt] = rsimp
         if (self.pointlist[rpt] is Simp) or (self.pointlist[rpt] is Topsimp):
@@ -404,24 +676,27 @@ class triangulation2D(triangulation2D_Base):
             self.pointlist[tpt] = lsimp
         if (self.pointlist[lpt] is Simp) or (self.pointlist[lpt] is Topsimp):
             self.pointlist[lpt] = lsimp
-        
-        #Next, delete all the references to simplices in both of the bad simplices
+        #  Delete all the references to simplices in both of the bad simplices
         for i in range(3):
             Simp.simplices[i] = None
             Topsimp.simplices[i] = None        
-        
         return [lsimp,rsimp]    
     
       
-    # MakeDelaunay takes the current triangulation and, through a series of edge flips, changes it into the Delaunay triangulation for this point configuration.  This function changes the underlying triangulation
-    def MakeDelaunay(self,single = False):
+    def MakeDelaunay(self):
+        """
+        MakeDelaunay takes the current triangulation and, through a series
+        of edge flips, changes it into the Delaunay triangulation for this 
+        point configuration.  This function changes the underlying 
+        triangulation
+        """        
         IsD, InteriorEdge, EdgeBSimps = None, None, None
-        if not single:  #vectorized version (this one makes marginal improvements)
-            IsD, InteriorEdge, EdgeBSimps = self.IsDelaunay()
+        if self._Vec:  #  vectorized version (marginal improvements)
+            IsD, InteriorEdge, EdgeBSimps = self._IsDelaunay()
         else:
-            EdgeBSimps = [None for i in range(self.totalnumedges)]
-            EdgeUsed = [False for i in range(self.totalnumedges)]
-            IsD = [False for i in range(self.totalnumedges)]
+            EdgeBSimps = [None for i in range(self._totalnumedges)]
+            EdgeUsed = [False for i in range(self._totalnumedges)]
+            IsD = [False for i in range(self._totalnumedges)]
             for simp in self.simplist:
                 if not simp.IsBoundarySimp:
                     for j in range(3):
@@ -429,24 +704,24 @@ class triangulation2D(triangulation2D_Base):
                             edgeid = simp.edgeids[j]
                             if not EdgeUsed[edgeid]:
                                 EdgeUsed[edgeid] = True
-                                EdgeBSimps[edgeid] = [[simp,simp.simplices[j]],edgeid, True]
-                                IsD[edgeid] = self.IsLocallyDelaunay([simp,simp.simplices[j]])
+                                EdgeBSimps[edgeid] = [[simp,simp.simplices[j]], edgeid, True]
+                                IsD[edgeid] = self._IsLocallyDelaunay([simp,simp.simplices[j]])
             InteriorEdge = EdgeUsed
             
-        EdgeList = [EdgeBSimps[i] for i in range(self.totalnumedges) if IsD[i] == False and InteriorEdge[i]]
-        EdgeList_Epos = [None for i in range(self.totalnumedges)]
+        EdgeList = [EdgeBSimps[i] for i in range(self._totalnumedges) if IsD[i] == False and InteriorEdge[i]]
+        EdgeList_Epos = [None for i in range(self._totalnumedges)]
         for i in range(len(EdgeList)):
             EdgeList_Epos[EdgeList[i][1]] = i
-        #now go through the edge list and start flipping edges
+        #  go through the edge list and start flipping edges
         while len(EdgeList) > 0:
             EdgeSimps, edge_id, checked = EdgeList.pop()
             EdgeList_Epos[edge_id] = None
             if not EdgeSimps[0].IsBoundarySimp and not EdgeSimps[1].IsBoundarySimp:
                 Flip = True
                 if not checked:
-                    Flip = not self.IsLocallyDelaunay(EdgeSimps)
+                    Flip = not self._IsLocallyDelaunay(EdgeSimps)
                 if Flip:
-                    LRsimps = self.EdgeFlip(EdgeSimps, edge_id ,self.atstep)
+                    LRsimps = self._EdgeFlip(EdgeSimps, edge_id ,self._atstep)
                     for i in range(2): # Left and right simplices
                         loc = LRsimps[i].edgeids.index(edge_id)
                         lrsimp = LRsimps[i]
@@ -459,15 +734,18 @@ class triangulation2D(triangulation2D_Base):
                                     EdgeList_Epos[eid] = len(EdgeList)
                                     EdgeList.append(ELinsert)
                                 else:
-                                    EdgeList[EdgeList_Epos[eid]] = ELinsert    
+                                    EdgeList[EdgeList_Epos[eid]] = ELinsert
 
-
-    
-    # IsDelaunay outputs an array (length = number of edges) of booleans, which indicate if the quadrilateral with the ith edge as a diagonal is Delaunay. Also outputs an array of the pairs of simplices which bound each edge. This calls IsDelaunayBase (which is outside the current class) for a jit speed-up
-    def IsDelaunay(self):
-        Ax, Ay, Bx, By, Cx, Cy, Dx, Dy = [np.zeros(self.totalnumedges) for i in range(8)]
-        EdgeUsed = [False for i in range(self.totalnumedges)]
-        BoundingSimps = [None for i in range(self.totalnumedges)]
+    def _IsDelaunay(self):
+        """IsDelaunay outputs an array (length = number of edges) of booleans,
+        which indicate if the quadrilateral with the ith edge as a diagonal is
+        Delaunay. Also outputs an array of the pairs of simplices which bound 
+        each edge. This calls IsDelaunayBase (from a helper function module)
+        for a jit speed-up.
+        """
+        Ax, Ay, Bx, By, Cx, Cy, Dx, Dy = [np.zeros(self._totalnumedges) for i in range(8)]
+        EdgeUsed = [False for i in range(self._totalnumedges)]
+        BoundingSimps = [None for i in range(self._totalnumedges)]
         for simp in self.simplist:
             if not simp.IsBoundarySimp:
                 for j in range(3):
@@ -488,11 +766,11 @@ class triangulation2D(triangulation2D_Base):
                             Dx[edgeid], Dy[edgeid] = self.pointpos[Dpt]
         return HF.IsDelaunayBaseWMask(Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,np.array(EdgeUsed)), EdgeUsed, BoundingSimps
     
-
-    #given the two adjacent simplices, determine if the configuration is locally Delaunay.  Returns True or False
-    def IsLocallyDelaunay(self,AdjSimps):
-        simp1 = AdjSimps[0]
-        simp2 = AdjSimps[1]
+    def _IsLocallyDelaunay(self, AdjSimps):
+        """Given the two adjacent simplices, this determine if the 
+        configuration is locally Delaunay.  Returns True or False.
+        """
+        simp1, simp2 = AdjSimps
         locid = simp1.simplices.index(simp2)
         Apt = simp1.points[(locid+2)%3]
         Ax, Ay = self.pointpos[Apt]
@@ -503,7 +781,6 @@ class triangulation2D(triangulation2D_Base):
         locid2 = simp2.simplices.index(simp1)
         Dpt = simp2.points[locid2]
         Dx, Dy = self.pointpos[Dpt]
-
         ADx = Ax - Dx
         ADy = Ay - Dy
         BDx = Bx - Dx
@@ -516,11 +793,9 @@ class triangulation2D(triangulation2D_Base):
         detvals = ADx*(BDy*CD2-CDy*BD2) - ADy*(BDx*CD2-CDx*BD2) + AD2*(BDx*CDy-CDx*BDy)
         return (detvals < 0) 
 
-
-    
-    def ArePointsAdjacent(self,pt1,pt2):
+    def _ArePointsAdjacent(self,pt1,pt2):
         AreAdjacent = False
-        goodind = (len(self.pointlist) - self.extranum)-1
+        goodind = (len(self.pointlist) - self._extranum)-1
         IsBndryEdge = False
         if pt1 > goodind:
             if pt2 > goodind:
@@ -535,7 +810,6 @@ class triangulation2D(triangulation2D_Base):
             simpposcounter = 0
             StartSimp = self.pointlist[pt1]
             locid = StartSimp.LocalID(pt1)
-
             if pt2 in StartSimp.points:
                 AreAdjacent = True
                 LRsimps.append(StartSimp)
@@ -559,34 +833,40 @@ class triangulation2D(triangulation2D_Base):
         else:
             return [AreAdjacent,None]
 
-    def DoesCurveLeft(self,pttriple):
+    def _DoesCurveLeft(self,pttriple):
         pt1, pt2, pt3 = pttriple
         pos1 = self.pointpos[pt1]
         pos2 = self.pointpos[pt2]
         pos3 = self.pointpos[pt3]
-        crossP = (pos3[0] - pos2[0])*(pos1[1] - pos2[1]) - (pos3[1] - pos2[1])*(pos1[0] - pos2[0])
+        crossP = ((pos3[0] - pos2[0])*(pos1[1] - pos2[1]) - 
+                  (pos3[1] - pos2[1])*(pos1[0] - pos2[0]))
         return crossP >= 0
 
-    #this determines if the given point (ptin) is to the left of line that goes from the first to second point in linepts
-    #Used in determining the edges crossed in an initial band
-    def IsLeft(self,linepts,ptin):
+    def _IsLeft(self,linepts,ptin):
+        #  this determines if the given point (ptin) is to the left of line 
+        #  that goes from the first to second point in linepts.
+        #  Used in determining the edges crossed in an initial band
         pttriple = [ptin,linepts[0], linepts[1]]
-        return self.DoesCurveLeft(pttriple)
+        return self._DoesCurveLeft(pttriple)
 
-    #This takes the two points in linepoints and adds a weight of one (or non-default value) to any edges that are crossed
-    #by the line.
-    def AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
+    def _AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
+        #  This takes the two points in linepoints and adds a weight of one 
+        #  (or non-default value) to any edges that are crossed by the line.
         pt1, pt2 = linepoints
-        if Boolin[1][0]: #this is the case of adjacent points (i.e. the line between the points is an edge)
-            #only if the curvelefts' (Boolin[0], Boolin[2]) are opposite one another, do we add a weight
+        if Boolin[1][0]: 
+            #  case of adjacent points (i.e. the line between the 
+            #  points is an edge). Only if the curvelefts' 
+            #  (Boolin[0], Boolin[2]) are opposite one another, 
+            #  do we add a weight
             if Boolin[0] is not Boolin[2]:
                 pt1rtlocid = Boolin[1][1][1].LocalID(pt1)
                 edgeindex = Boolin[1][1][1].edgeids[(pt1rtlocid+1)%3]
                 LoopIn.weightlist[edgeindex] += wadd
         else:
-            #first we need to determine the direction (which simplex) to set out from that has pt1 as a point.
-            stlocid, StartSimp = self.SimpInDir([pt1,pt2])
-            endlocid, EndSimp = self.SimpInDir([pt2,pt1])
+            #  determine the direction (which simplex) to set out 
+            #  from that has pt1 as a point.
+            stlocid, StartSimp = self._SimpInDir([pt1,pt2])
+            endlocid, EndSimp = self._SimpInDir([pt2,pt1])
             if not pt2 in StartSimp.points:
                 edgeindex = StartSimp.edgeids[stlocid]
                 LoopIn.weightlist[edgeindex] += wadd
@@ -596,7 +876,7 @@ class triangulation2D(triangulation2D_Base):
                 while not CurrentSimp is EndSimp:
                     ptcompare = CurrentSimp.points[(leftptloc+2)%3]
                     indexadd = 0
-                    if not self.IsLeft(linepoints,ptcompare):
+                    if not self._IsLeft(linepoints,ptcompare):
                         indexadd = 1
                     edgeindex = CurrentSimp.edgeids[(leftptloc+indexadd)%3]
                     LoopIn.weightlist[edgeindex] += wadd
@@ -604,26 +884,28 @@ class triangulation2D(triangulation2D_Base):
                     CurrentSimp = CurrentSimp.simplices[(leftptloc+indexadd)%3]
                     leftptloc = CurrentSimp.LocalID(leftpoint)
 
-    #this returns the simplex (and local point id) that contains the first of linepoints, 
-    #and has the line (to the second point) passing through it
-    def SimpInDir(self,linepoints):
-        pt1 = linepoints[0]
-        pt2 = linepoints[1]
+    def _SimpInDir(self,linepoints):
+        #  this returns the simplex (and local point id) that contains the
+        #  first of linepoints, and has the line (to the second point) 
+        #  passing through it
+        pt1, pt2 = linepoints
         StartSimp = self.pointlist[pt1]
         locpt = StartSimp.LocalID(pt1)
         ptright = StartSimp.points[(locpt+1)%3]
         ptleft = StartSimp.points[(locpt+2)%3]
-        while not ((not self.IsLeft([pt1,pt2],ptright)) and self.IsLeft([pt1,pt2],ptleft)):
+        while not ((not self._IsLeft([pt1,pt2],ptright)) and 
+                   self._IsLeft([pt1,pt2],ptleft)):
             StartSimp = StartSimp.simplices[(locpt+1)%3]
             locpt = StartSimp.LocalID(pt1)
             ptright = StartSimp.points[(locpt+1)%3]
             ptleft = StartSimp.points[(locpt+2)%3]
         return locpt, StartSimp
 
-    #This takes the central point in pttriple and adds in the weight of wadd to each of the radial edges starting
-    #from the edge that is part of the simplex bisected by pt1 and pt2, to the edge that is part of the simplex
-    #bisected by pt2 and pt3
-    def AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1):
+    def _AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1):
+        #  This takes the central point in pttriple and adds in the weight
+        #  of wadd to each of the radial edges starting from the edge that 
+        #  is part of the simplex bisected by pt1 and pt2, to the edge that
+        #  is part of the simplex bisected by pt2 and pt3
         pt1, pt2, pt3 = pttriple
         indadd = 1
         if not Boolin[1]:  indadd = 2 # curve right triggers this
@@ -635,7 +917,7 @@ class triangulation2D(triangulation2D_Base):
                 StartSimp = Boolin[0][1][1]
             stlocid = StartSimp.LocalID(pt2)
         else:
-            stlocid, StartSimp = self.SimpInDir([pt2,pt1])
+            stlocid, StartSimp = self._SimpInDir([pt2,pt1])
         endlocid, EndSimp = None, None
         if Boolin[2][0]:
             if not Boolin[1]:
@@ -644,7 +926,7 @@ class triangulation2D(triangulation2D_Base):
                 EndSimp = Boolin[2][1][1]
             endlocid = EndSimp.LocalID(pt2)   
         else:
-            endlocid, EndSimp = self.SimpInDir([pt2,pt3])
+            endlocid, EndSimp = self._SimpInDir([pt2,pt3])
         edgeindex = StartSimp.edgeids[(stlocid+indadd)%3]
         LoopIn.weightlist[edgeindex] += wadd
         CurrentSimp = StartSimp.simplices[(stlocid+indadd)%3]
@@ -655,13 +937,14 @@ class triangulation2D(triangulation2D_Base):
             CurrentSimp = CurrentSimp.simplices[(ptloc+indadd)%3]
             ptloc = CurrentSimp.LocalID(pt2)    
 
-    #using ref pt, see if point is in simp.  if not, find edge intersection and then 
-    # get adj simp, find ref point and dx,dy for shift that matches edge from simp.  Then calls self recursively
-    # stops when simp is found with this point interior.  returns list of pairs [simp, edge] along path
-    def Simp_Hop(self, pt_in, simp, line_big, edge_prev = None, next_edge = None):
+    def _Simp_Hop(self, pt_in, simp, line_big, edge_prev = None, next_edge = None):
+        #  see if pt_in is in simp.  If not, find edge intersection and then 
+        #  get adj simp, find ref point and dx,dy for shift that matches edge 
+        #  from simp. Then calls self recursively. Stops when simp is found 
+        #  with this point interior.  returns list of pairs [simp, edge] along path
         delta = 1e-8
         #first see if pt_in is in the simp
-        if self.Tri_Contains(pt_in, simp):
+        if self._Tri_Contains(pt_in, simp):
             return [[simp, None]]
         else:
             vertices = np.array([copy.copy(self.pointpos[p]) for p in simp.points])
@@ -688,9 +971,10 @@ class triangulation2D(triangulation2D_Base):
             if next_id is None: return None
             edge = simp.edgeids[next_id]
             next_simp = simp.simplices[next_id]
-            return [[simp, edge]] + self.Simp_Hop(pt_in, next_simp, line_big, edge_prev = edge)
+            return [[simp, edge]] + self._Simp_Hop(pt_in, next_simp, line_big, edge_prev = edge)
     
-    def Tri_Contains(self, pt, simp):
+    def _Tri_Contains(self, pt, simp):
+        # Determines whether the triangle (simp) contains pt.
         vertices = np.array([copy.copy(self.pointpos[p]) for p in simp.points])
         trial_pt = np.array(pt)
         for i in range(3):
@@ -699,17 +983,18 @@ class triangulation2D(triangulation2D_Base):
                 return False
         return True
 
-    #EdgeNeighbors
-    def Get_Edges(self, points, closed = True, end_pts_pin = [False,False]):
+    def _Get_Edges(self, points, closed = True, end_pts_pin = [False,False]):
+        #  Finds the list of edges crossed by the curve represented by
+        #  the list of points (points).
         tree = KDTree(self.pointpos)
         _,nn = tree.query(points, k=1)
-        simp_in = [self.Find_Simp(points[i], nn[i]) for i in range(len(nn))]
+        simp_in = [self._Find_Simp(points[i], nn[i]) for i in range(len(nn))]
         edge_list = [] 
         ncl = 0
         if not closed: ncl = -1
         for i in range(len(points)+ncl):
             line_big = [points[i], points[(i+1)%len(points)]]
-            simp_chain = self.Simp_Hop(points[(i+1)%len(points)], simp_in[i], line_big)
+            simp_chain = self._Simp_Hop(points[(i+1)%len(points)], simp_in[i], line_big)
             edge_list += [simp_chain[k][1] for k in range(len(simp_chain)-1)]
         HF.Reduce_List(edge_list)
         if not closed and not end_pts_pin == [False, False]:
@@ -724,24 +1009,52 @@ class triangulation2D(triangulation2D_Base):
             edge_list = temp_edge_list + edge_list[::-1]
         return edge_list
 
-
-    #find simp that contains
-    def Find_Simp(self, pt_in, nn_id):
+    def _Find_Simp(self, pt_in, nn_id):
+        #  Finds the simplex which contains the input point
+        #  uses the nearest neighbor point (nn_id)
         simp_set, l_id_set = self.pointlist[nn_id].SimpNeighbors(nn_id)
         for i in range(len(simp_set)):
             simp = simp_set[i]
             l_id = l_id_set[i]
             edge = simp.edgeids[l_id]
             line_big = [copy.copy(self.pointpos[nn_id]), pt_in]
-            simp_chain = self.Simp_Hop(pt_in, simp, line_big, next_edge = edge)
+            simp_chain = self._Simp_Hop(pt_in, simp, line_big, next_edge = edge)
             if simp_chain is not None:
                 return simp_chain[-1][0]
         return None
 
-
     #####Plotting
-    # PlotPrelims - the preliminary plotting settings.  returns the newly created figure and axes.
-    def PlotPrelims(self, PP: PrintParameters):
+    def _PlotPrelims(self, PP: PrintParameters):
+        """
+        Handles the initial setup for the figure
+
+        Parameters
+        ----------
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        Bounds : list of lists
+            Bounds has the format [[x_min, y_min],[x_max, y_max]], and 
+            determines the bounding box for plotting. This is usually set
+            automatically.
+
+        FigureSizeX : float
+            The width of the image in inches.  The height is automatically 
+            calculated based on Bounds.
+
+        dpi : int
+            The dots per inch.  Increase to increase the resolution and size of 
+            resulting image file.
+
+        Returns
+        -------
+        fig : matplotlib fig object
+            Not currently used, but might be used in the future to
+            add another subplot
+
+        ax : matplotlib axis object
+            This is used to add features to the current plot
+        """
         szx = PP.FigureSizeX
         szy = szx
         if PP.boundary_points and PP.ExpandedBounds is not None:
@@ -767,29 +1080,71 @@ class triangulation2D(triangulation2D_Base):
         fig.tight_layout(pad=0)
         bbox = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         xlim = ax.get_xlim()
-        PP.conversion_factor = (xlim[1]-xlim[0])/bbox.width/72
+        PP._conversion_factor = (xlim[1]-xlim[0])/bbox.width/72
         return fig, ax
 
-    
-    # TriangulationPlotBase - This plots the underlying triangulation
-    def TriangulationPlotBase(self, ax, PP: PrintParameters):
+    def _TriangulationPlotBase(self, ax, PP: PrintParameters):
+        """
+        Plots the underlying triangulation
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        linewidth_tri : float
+            The line width of the background triangulation.
+
+        linecolor_tri : str
+            The color of the triangulation lines. Default is 'g' (green).    
+        """        
         if not PP.boundary_points:
-            xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-self.extranum]]  #note that we exclude the bounding points
-            ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-self.extranum]]
-            triangles = [x.points for x in self.simplist if (len(set(x.points).intersection([(len(self.pointpos)-y) for y in range(1,self.extranum+1)])) == 0)]  #make sure that the list of triangles (triplets of points) do not include the excluded boundary
-            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
+            xpoints = [x[0] for x in self.pointpos[:len(self.pointpos)-
+                       self._extranum]]  
+            #  note that we exclude the bounding points
+            ypoints = [x[1] for x in self.pointpos[:len(self.pointpos)-
+                       self._extranum]]
+            #  make sure that the list of triangles (triplets of points) do 
+            #  not include the excluded boundary
+            triangles = [x.points for x in self.simplist if 
+                         (len(set(x.points).intersection([(len(self.pointpos)-y) 
+                                    for y in range(1,self._extranum+1)])) == 0)]  
+            
+            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, 
+                       lw=PP.linewidth_tri, zorder=1)
         else:
             xpoints = [x[0] for x in self.pointpos]  
             ypoints = [x[1] for x in self.pointpos]
             triangles = [x.points for x in self.simplist]
-            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, lw=PP.linewidth_tri, zorder=1)
+            ax.triplot(xpoints, ypoints, triangles, c=PP.linecolor_tri, 
+                       lw=PP.linewidth_tri, zorder=1)
 
-    
-# PointPlotBase - plots the points (excluding the bounding points), with options for the size of the point and including the point label
-    def PointPlotBase(self, ax, PP: PrintParameters):
+    def _PointPlotBase(self, ax, PP: PrintParameters):
+        """
+        Plots the points
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        ptlabels : bool
+            If True, the integer label for each point is plotted next to the 
+            point. False is default.  Mainly used for visually finding groups 
+            of points to encircle with a band.
+
+        markersize : float
+            Sets the markersize of the points.
+        """        
         ptlen = len(self.pointpos)
         if not PP.boundary_points:
-            ptlen -= self.extranum
+            ptlen -= self._extranum
         xpoints = [x[0] for x in self.pointpos[:ptlen]]  
         ypoints = [x[1] for x in self.pointpos[:ptlen]]
         if PP.ptlabels:
@@ -798,35 +1153,100 @@ class triangulation2D(triangulation2D_Base):
         ax.scatter(xpoints, ypoints, marker='o', s=PP.markersize, c='k', zorder=2)
 
 
-    def TTPlotBase(self, ax, LoopIn, PP: PrintParameters):
-        EdgePlotted = [False for i in range(self.totalnumedges)]  #keeps track of segments that have been plotted (so as to not plot an element twice)
+    def _TTPlotBase(self, ax, LoopIn, PP: PrintParameters):
+        """
+        Plots the train-track representation of the loop
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        LoopIn : Loop object
+            The data in LoopIn determine the train-track
+
+        PP : PrintParameters object
+            For this method, the relevant PrintParameters attributes are:
+
+        Delaunay : bool
+            Flag - if True then uses Voronoi-based control points to draw the 
+            train-track representation of the loops.  If False (default), then
+            triangle centers are used as control points.
+
+        DelaunayAdd : bool
+            Flag - A different Voronoi-based control point plotting system for
+            the train-tracks.  This represents the train-track weights as line 
+            widths, which join naturally at train-track switch locations. This
+            is only relevant if Delaunay is True.
+
+        color_weights : bool
+            If True, then the individual segments of the train-track will be 
+            colored based on their weights.  This is one way to encode weight
+            information in the plots.  Default is False.
+    
+        log_color : bool
+            If True these colors will be assigned using the log of the 
+            weights. If False (default), the weights them-selves will 
+            determine the color scale.
+        
+        color_map : str
+            The color map to be used, default is 'inferno_r'.
+    
+        linewidth_tt : float
+            The line width of the train-track.  If DelaunayAdd is True, then
+            this is the maximum line-width
+    
+        linecolor_tt : str
+            The line color of the train-track. Default is 'r' (red).
+    
+        alpha_tt : float
+            The opacity of the train-track.  Default is 1.0 (completely 
+            opaque/not transparent).
+    
+        frac : float
+            For plotting with the Delaunay flag, this determined how curved 
+            the train-tracks appear.  A value of 1.0 is maximally curvy (no 
+            linear segments), while a value of 0.0 would be just straight 
+            lines on following the Voronoi skeleton.  Default is 0.9
+    
+        tt_lw_min_frac : float
+            The minimum fraction of linewidth_tt that will be represented.  
+            This means that all train-track segments with weights below this
+            fraction of the maximum weight will be represented as this 
+            fraction of linewidth_tt.  All segments with larger weight will 
+            have a line width that linear in this range.
+        """        
+        #  keeps track of segments that have been plotted 
+        #  (so as to not plot an element twice)
+        EdgePlotted = [False for i in range(self._totalnumedges)]  
         ttpatches, cweights, line_widths = [], [], []
-        if not PP.Delaunay:  #regular case, works for any triangulation
+        if not PP.Delaunay:  #  regular case, works for any triangulation
             for simp in self.simplist:
                 if not simp.IsBoundarySimp:
-                    new_ttpatches, new_cweights = self.GeneralSimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
+                    new_ttpatches, new_cweights = self._GeneralSimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
                     ttpatches += new_ttpatches
                     if PP.color_weights:
                         cweights += new_cweights
-        else:  #looks nicer, but only works for a Delaunay triangulation
+        else:  #  looks nicer, but only works for a Delaunay triangulation
             if not PP.DelaunayAdd:
                 for simp in self.simplist:
                     if not simp.IsBoundarySimp:
-                        new_ttpatches, new_cweights = self.DelaunaySimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
+                        new_ttpatches, new_cweights = self._DelaunaySimplexTTPlot(simp, LoopIn, EdgePlotted, PP)
                         ttpatches += new_ttpatches
                         if PP.color_weights:
                             cweights += new_cweights
             else:
-                PP.max_weight = max(LoopIn.weightlist)
+                PP._max_weight = max(LoopIn.weightlist)
                 for simp in self.simplist:
                     if not simp.IsBoundarySimp:
-                        new_ttpatches, new_cweights, new_l_widths = self.DelaunaySimplexTTPlot_exp(simp, LoopIn, PP)
+                        new_ttpatches, new_cweights, new_l_widths = self._DelaunaySimplexTTPlot_exp(simp, LoopIn, PP)
                         ttpatches += new_ttpatches
                         line_widths += new_l_widths
                         if PP.color_weights:
                             cweights += new_cweights
-                 
-        Pcollection = PatchCollection(ttpatches, fc="none", alpha=PP.alpha_tt, capstyle = 'butt', joinstyle = 'round', zorder=3)
+        Pcollection = PatchCollection(ttpatches, fc="none", alpha=PP.alpha_tt, 
+                                      capstyle = 'butt', joinstyle = 'round',
+                                      zorder=3)
         if not PP.DelaunayAdd:  Pcollection.set_linewidth(PP.linewidth_tt)
         else:  Pcollection.set_linewidth(line_widths)
         if not PP.color_weights: Pcollection.set_edgecolor(PP.linecolor_tt)
@@ -836,40 +1256,40 @@ class triangulation2D(triangulation2D_Base):
             Pcollection.set_cmap(PP.color_map)
         ax.add_collection(Pcollection) 
 
-    
-    # GeneralSimplexTTPlot - plot the segments of train tracks that are determined from a given simplex
-    def GeneralSimplexTTPlot(self, simp, LoopIn, EdgePlotted, PP: PrintParameters):
-        patches_out = []
-        weights_out = []
+    def _GeneralSimplexTTPlot(self, simp, LoopIn, EdgePlotted, PP: PrintParameters):
+        # plot the segments of train tracks that are determined from a given simplex
+        patches_out, weights_out = [], []
         W = [LoopIn.weightlist[eid] for eid in simp.edgeids] #edge weights
         delta = 1e-10
         if sum(W) > delta:  # if there are any weights to plot
-            vertpts = np.array([self.pointpos[pts] for pts in simp.points]) #locations of the three simplex vertices
-            #local id of the extra point in each of the 3 surrounding simplices
+            #  locations of the three simplex vertices
+            vertpts = np.array([self.pointpos[pts] for pts in simp.points])
+            #  local id of the extra point in each of the 3 surrounding simplices
             exlids = [simp.simplices[i].edgeids.index(simp.edgeids[i]) for i in range(3)]
-            #locations of the extra point in each of the 3 surrounding simplices
+            #  locations of the extra point in each of the 3 surrounding simplices
             exvertpts = np.array([self.pointpos[simp.simplices[i].points[exlids[i]]] for i in range(3)])
-            #now let's get the simplex geometric centers and edge halfwaypoints
+            #  now let's get the simplex geometric centers and edge halfwaypoints
             SimpCenter = HF.GetCenter(vertpts.tolist())
             AdjSimpCenters = [HF.GetCenter([vertpts[(1+i)%3,:], exvertpts[i,:], vertpts[(2+i)%3,:]]) for i in range(3)]
             EdgeHalf = np.array([HF.GetCenter([vertpts[(1+i)%3],vertpts[(2+i)%3]]) for i in range(3)])
-            #now the points that are halfway between the edge centers and the simpcenter
+            #  now the points that are halfway between the edge centers and the simpcenter
             CenterEdgeHalf = np.array([HF.GetCenter([SimpCenter, EdgeHalf[i,:]]) for i in range(3)])
-            #now the points that are halfway between the edge centers and the adjacent simplex centers
+            #  now the points that are halfway between the edge centers and the adjacent simplex centers
             AdjEdgeHalf = np.array([HF.GetCenter([AdjSimpCenters[i], EdgeHalf[i]]) for i in range(3)])
-            #check that the quadratic Bezier control triangle doesn't contain a vertex.  If so, we modify the control points
+            #  check that the quadratic Bezier control triangle doesn't contain a vertex.  
+            #  If so, we modify the control points
             for i in range(3):
-                side = 2 #default is left
+                side = 2 #  default is left
                 C1 = HF.Curl( AdjEdgeHalf[i,:]-EdgeHalf[i,:] , EdgeHalf[i,:]-CenterEdgeHalf[i,:] )
-                if C1 > 0: side = 1 #right
+                if C1 > 0: side = 1 #  right
                 Line1 = [CenterEdgeHalf[i,:], AdjEdgeHalf[i,:]]
                 Line2 = [vertpts[(i+side)%3,:], EdgeHalf[i,:]]
                 t1, t2 = HF.GetIntersectionTimes(Line1, Line2)
-                if t2 < 0: #need to modify
+                if t2 < 0: #  need to modify
                     alpha = -t2/(1-t2)
                     CenterEdgeHalf[i,:] = (1-alpha)*CenterEdgeHalf[i,:] + alpha*EdgeHalf[i,:]
                     AdjEdgeHalf[i,:] = (1-alpha)*AdjEdgeHalf[i,:] + alpha*EdgeHalf[i,:]
-            Wp = [(W[(k+1)%3]+W[(k+2)%3]-W[k])/2 for k in range(3)]  #the interior weights
+            Wp = [(W[(k+1)%3]+W[(k+2)%3]-W[k])/2 for k in range(3)]  #  the interior weights
             for i in range(3):
                 if not EdgePlotted[simp.edgeids[i]]:
                     if W[i] > delta:
@@ -881,25 +1301,28 @@ class triangulation2D(triangulation2D_Base):
                     if PP.color_weights: weights_out.append(Wp[i])
         return patches_out, weights_out
 
-
-#used in other function to plot the segments of train tracks that are determined from a given simplex
-    #this version assumes the triangulation is Delaunay, and uses the dual Voroni Centers as control points
-    def DelaunaySimplexTTPlot(self, simp, LoopIn, EdgePlotted, PP):
-        patches_out = []
-        weights_out = []
+    def _DelaunaySimplexTTPlot(self, simp, LoopIn, EdgePlotted, PP):
+        #  used in other function to plot the segments of train tracks that
+        #  are determined from a given simplex this version assumes the 
+        #  triangulation is Delaunay, and uses the dual Voroni Centers as 
+        #  control points
+        patches_out, weights_out = [], []
         W = [LoopIn.weightlist[eid] for eid in simp.edgeids] #edge weights
         delta = 1e-10
         if sum(W) > delta:  # if there are any weights to plot
-            vertpts = np.array([self.pointpos[pts] for pts in simp.points]) #locations of the three simplex vertices
-            #local id of the extra point in each of the 3 surrounding simplices
+            #  locations of the three simplex vertices
+            vertpts = np.array([self.pointpos[pts] for pts in simp.points]) 
+            #  local id of the extra point in each of the 3 surrounding simplices
             exlids = [simp.simplices[i].edgeids.index(simp.edgeids[i]) for i in range(3)]
-            #locations of the extra point in each of the 3 surrounding simplices
+            #  locations of the extra point in each of the 3 surrounding simplices
             exvertpts = np.array([self.pointpos[simp.simplices[i].points[exlids[i]]] for i in range(3)])
-            #now let's get the simplex Voronoi centers and halfwaypoints
+            #  now let's get the simplex Voronoi centers and halfwaypoints
             SimpVCenter = HF.GetCircumCircleCenter(vertpts.tolist())
-            AdjSimpVCenters = [HF.GetCircumCircleCenter([vertpts[(1+i)%3,:], exvertpts[i,:], vertpts[(2+i)%3,:]]) for i in range(3)]
-            HalfVCs = [HF.GetCenter([SimpVCenter,AdjSimpVCenters[i]]) for i in range(3)] #halfway between Voronoi centers
-            #now the points that partway (frac - default = 0.5) from Center voroni to HalfVCs
+            AdjSimpVCenters = [HF.GetCircumCircleCenter([vertpts[(1+i)%3,:], exvertpts[i,:], vertpts[(2+i)%3,:]]) 
+                               for i in range(3)]
+            #  halfway between Voronoi centers
+            HalfVCs = [HF.GetCenter([SimpVCenter,AdjSimpVCenters[i]]) for i in range(3)] 
+            #  now the points that partway (frac - default = 0.5) from Center voroni to HalfVCs
             FracControlPts_In = np.array([HF.LinFuncInterp(SimpVCenter, HalfVCs[i], PP.frac) for i in range(3)])
             FracControlPts_Out = np.array([HF.LinFuncInterp(AdjSimpVCenters[i], HalfVCs[i], PP.frac) for i in range(3)])
             Wp = [(W[(k+1)%3]+W[(k+2)%3]-W[k])/2 for k in range(3)]  #the interior weights
@@ -914,44 +1337,46 @@ class triangulation2D(triangulation2D_Base):
                     if PP.color_weights: weights_out.append(Wp[i])
         return patches_out, weights_out
 
-    #used in other function to plot the segments of train tracks that are determined from a given simplex
-    #this version assumes the triangulation is Delaunay, and uses the dual Voroni Centers as control points
-    #this is an experimental version, where I work on ideas before incorporating them into the main plotting
-    def DelaunaySimplexTTPlot_exp(self, simp, LoopIn, PP):
-        patches_out = []
-        weights_out = []
-        line_weights_out = []
+    def _DelaunaySimplexTTPlot_exp(self, simp, LoopIn, PP):
+        #  used in other function to plot the segments of train tracks that 
+        #  are determined from a given simplex this version assumes the 
+        #  triangulation is Delaunay, and uses the dual Voroni Centers as 
+        #  control points this is an experimental version, where I work on 
+        #  ideas before incorporating them into the main plotting
+        patches_out, weights_out, line_weights_out = [], [], []
         W = [LoopIn.weightlist[eid] for eid in simp.edgeids] #edge weights
         delta = 1e-10
         if sum(W) > delta:  # if there are any weights to plot
-            vertpts = np.array([self.pointpos[pts] for pts in simp.points]) #locations of the three simplex vertices
-            #local id of the extra point in each of the 3 surrounding simplices
+            #  locations of the three simplex vertices
+            vertpts = np.array([self.pointpos[pts] for pts in simp.points]) 
+            #  local id of the extra point in each of the 3 surrounding simplices
             exlids = [simp.simplices[i].edgeids.index(simp.edgeids[i]) for i in range(3)]
-            #locations of the extra point in each of the 3 surrounding simplices
+            #  locations of the extra point in each of the 3 surrounding simplices
             exvertpts = np.array([self.pointpos[simp.simplices[i].points[exlids[i]]] for i in range(3)])
-            #now let's get the simplex Voronoi centers and halfwaypoints
+            #  now let's get the simplex Voronoi centers and halfwaypoints
             SimpVCenter = HF.GetCircumCircleCenter(vertpts.tolist())
-            AdjSimpVCenters = [HF.GetCircumCircleCenter([vertpts[(1+i)%3,:], exvertpts[i,:], vertpts[(2+i)%3,:]]) for i in range(3)]
-            HalfVCs = [HF.GetCenter([SimpVCenter,AdjSimpVCenters[i]]) for i in range(3)] #halfway between Voronoi centers
-            #now the points that partway (frac - default = 0.5) from Center voroni to HalfVCs
+            AdjSimpVCenters = [HF.GetCircumCircleCenter([vertpts[(1+i)%3,:], exvertpts[i,:], vertpts[(2+i)%3,:]]) 
+                               for i in range(3)]
+            #  halfway between Voronoi centers
+            HalfVCs = [HF.GetCenter([SimpVCenter,AdjSimpVCenters[i]]) for i in range(3)] 
+            #  now the points that partway (frac - default = 0.5) from Center voroni to HalfVCs
             FracControlPts_In = np.array([HF.LinFuncInterp(SimpVCenter, HalfVCs[i], PP.frac) for i in range(3)])
             FracControlPts_Out = np.array([HF.LinFuncInterp(AdjSimpVCenters[i], HalfVCs[i], PP.frac) for i in range(3)])
             Wp = [(W[(k+1)%3]+W[(k+2)%3]-W[k])/2 for k in range(3)]  #the interior weights
             W_scaled = []
             Wp_scaled = []
             for i in range(3):
-                if W[i] <= PP.max_weight*PP.tt_lw_min_frac: W_scaled.append(PP.linewidth_tt*PP.tt_lw_min_frac)
-                else: W_scaled.append(PP.linewidth_tt*(W[i]/PP.max_weight))
-                if Wp[i] <= PP.max_weight*PP.tt_lw_min_frac: Wp_scaled.append(PP.linewidth_tt*PP.tt_lw_min_frac)
-                else: Wp_scaled.append(PP.linewidth_tt*(Wp[i]/PP.max_weight))
-
-            #now find the modified control points
+                if W[i] <= PP._max_weight*PP.tt_lw_min_frac: W_scaled.append(PP.linewidth_tt*PP.tt_lw_min_frac)
+                else: W_scaled.append(PP.linewidth_tt*(W[i]/PP._max_weight))
+                if Wp[i] <= PP._max_weight*PP.tt_lw_min_frac: Wp_scaled.append(PP.linewidth_tt*PP.tt_lw_min_frac)
+                else: Wp_scaled.append(PP.linewidth_tt*(Wp[i]/PP._max_weight))
+            #  now find the modified control points
             rmp90 = np.array([[0, -1],[1, 0]])
             rmm90 = np.array([[0, 1],[-1, 0]])
             FCP_m_center = FracControlPts_In - np.array(SimpVCenter)
             FCP_m_center_mag = np.hypot(FCP_m_center[:,0],FCP_m_center[:,1])
-            displace_r = np.array([(W_scaled[i] - Wp_scaled[(i+1)%3])/2*PP.conversion_factor for i in range(3)])
-            displace_l = np.array([(W_scaled[i] - Wp_scaled[(i+2)%3])/2*PP.conversion_factor for i in range(3)])
+            displace_r = np.array([(W_scaled[i] - Wp_scaled[(i+1)%3])/2*PP._conversion_factor for i in range(3)])
+            displace_l = np.array([(W_scaled[i] - Wp_scaled[(i+2)%3])/2*PP._conversion_factor for i in range(3)])
             FCP_m_center_rotp = np.array([np.dot(rmp90,FCP_m_center[i,:]) for i in range(3)])
             FCP_m_center_rotm = np.array([np.dot(rmm90,FCP_m_center[i,:]) for i in range(3)])
             scaling_l = displace_l/FCP_m_center_mag
@@ -964,50 +1389,59 @@ class triangulation2D(triangulation2D_Base):
             Center_mod_r = delta_vec_r + np.array(SimpVCenter)
             HalfVCs_mod_l = delta_vec_l + np.array(HalfVCs)
             HalfVCs_mod_r = delta_vec_r + np.array(HalfVCs)
-
             center_m = np.array([HF.GetIntersectionPoint([FCP_mod_r[(i+2)%3], Center_mod_r[(i+2)%3]], [FCP_mod_l[(i+1)%3], Center_mod_l[(i+1)%3]] ) for i in range(3)])
-            control_points = np.array([[HalfVCs_mod_r[(i+2)%3],FCP_mod_r[(i+2)%3], center_m[i] , FCP_mod_l[(i+1)%3],HalfVCs_mod_l[(i+1)%3] ] for i in range(3)])
-
+            control_points = np.array([[HalfVCs_mod_r[(i+2)%3], FCP_mod_r[(i+2)%3], center_m[i] , FCP_mod_l[(i+1)%3], HalfVCs_mod_l[(i+1)%3] ] for i in range(3)])
             for i in range(3):
                 if Wp[i] > delta:
                     patches_out.append(HF.BezierCustom(control_points[i,0,:], control_points[i,1,:], control_points[i,2,:], control_points[i,3,:], control_points[i,4,:]))
                     if PP.color_weights: weights_out.append(Wp[i])
                     line_weights_out.append(Wp_scaled[i])
         return patches_out, weights_out, line_weights_out        
+
     
-   #this creates a copy of the current triangulation object with or without copying the weight operators
     def TriCopy(self, EvolutionReset = True):
-        #first create an empty triangulation object (to be returned at the end)
+        """
+        Creates a copy of this triangulation2D object.  Custom, as a 
+        deepcopy is not sufficient.
+
+        Parameters
+        ----------
+        EvolutionReset : bool
+            If True (default), then the WeightOperatorList is reset to
+            be an empty list.  i.e. the memory of any past evolution 
+            is ignored.
+
+        Returns
+        -------
+        triangulation2D object
+            Returns a copy of this triangulation2D object
+        """        
+        #  create an empty triangulation object (to be returned at the end)
         TriC = triangulation2D([], None, empty = True)
-        if not EvolutionReset: TriC.atstep = self.atstep
-        TriC.extranum = self.extranum
+        if not EvolutionReset: TriC._atstep = self._atstep
+        TriC._extranum = self._extranum
         TriC.Domain = self.Domain
-        TriC.ptnum = self.ptnum
-        TriC.extrapoints = copy.deepcopy(self.extrapoints)
+        TriC._ptnum = self._ptnum
+        TriC._extrapoints = copy.deepcopy(self._extrapoints)
         TriC.pointpos = copy.deepcopy(self.pointpos)
-        TriC.pointposfuture = copy.deepcopy(self.pointposfuture)
-        TriC.Vec = self.Vec
+        TriC._pointposfuture = copy.deepcopy(self._pointposfuture)
+        TriC._Vec = self._Vec
         for i in range(len(self.simplist)):
             TriC.simplist.append(simplex2D(self.simplist[i].points))
             TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)
             TriC.simplist[-1].SLindex = i
             TriC.simplist[-1].IsBoundarySimp = self.simplist[i].IsBoundarySimp
-        
-        #now create the links
+        #  now create the links
         for i in range(len(self.simplist)):
             for j in range(3):
                 if not self.simplist[i].simplices[j] is None:
                     TriC.simplist[i].simplices[j] = TriC.simplist[self.simplist[i].simplices[j].SLindex]
-
-        #now fill the pointlist
+        #  now fill the pointlist
         TriC.pointlist = []
         for i in range(len(self.pointlist)):
-            TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])
-                    
-        TriC.totalnumedges = self.totalnumedges
-
+            TriC.pointlist.append(TriC.simplist[self.pointlist[i].SLindex])            
+        TriC._totalnumedges = self._totalnumedges
         if not EvolutionReset:
             for i in range(len(self.WeightOperatorList)):
-                TriC.WeightOperatorList.append(WeightOperator(copy.copy(self.WeightOperatorList[i].es)))
-                
+                TriC.WeightOperatorList.append(WeightOperator(copy.copy(self.WeightOperatorList[i].es)))          
         return TriC

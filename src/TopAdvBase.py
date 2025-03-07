@@ -14,9 +14,6 @@ class simplex2D_Base(ABC):
 
     Attributes
     ----------
-    _count : int
-        a class-level count of the number of simpices created
-
     points : list of 3 ints
         List of the 3 vertex point IDs. These IDs will be used to get the 
         vertex spatial locations from a master list that is a triangulation2D
@@ -192,7 +189,7 @@ class Loop:
             in valid loop coordinates.
             Mesh is useful for picking up mixing thoughout the entire domain.
         """
-        self.weightlist = [0 for i in range(tri.totalnumedges)]
+        self.weightlist = [0 for i in range(tri._totalnumedges)]
         self.Shear = Shear
         if mesh:
             for i in range(len(self.weightlist)):
@@ -203,19 +200,19 @@ class Loop:
         else:
             if not self.Shear:
                 if rbands is not None:
-                    tri.BandWeightInitialize(rbands, LoopIn = self)
+                    tri._BandWeightInitialize(rbands, LoopIn = self)
                 if curves is not None:
-                    tri.CurveWeightInitialize(curves, LoopIn = self)
+                    tri._CurveWeightInitialize(curves, LoopIn = self)
             else:
                 RegLoop = Loop(tri)
                 if rbands is not None:
-                    tri.BandWeightInitialize(rbands, LoopIn = RegLoop)
+                    tri._BandWeightInitialize(rbands, LoopIn = RegLoop)
                 if curves is not None:
-                    tri.CurveWeightInitialize(curves, LoopIn = RegLoop)
+                    tri._CurveWeightInitialize(curves, LoopIn = RegLoop)
                 #  This first creates a regular loop (regular coordinates), 
                 #  then feeds this into the triangulation object to get the
                 #  shear coordinates
-                tri.ShearWeightInitialize(RegLoop, self)
+                tri._ShearWeightInitialize(RegLoop, self)
                        
     def GetWeightTotal(self):
         if not self.Shear:
@@ -274,7 +271,6 @@ class WeightOperator:
         self.eids = IndexSet
         self.time = TimeIn
     
-    #This updates the given weightlist
     def Update(self, LoopIn, Reverse = False):
         """
         Parameters
@@ -402,11 +398,6 @@ class PrintParameters:
         of the maximum weight will be represented as this fraction of 
         linewidth_tt.  All segments with larger weight will have a line width
         that linear in this range.
-
-    boundary_points : bool
-        (Not used in the periodic boundary version).  If true, this sets a 
-        larger boundary (calculated automatically) which included the boundary
-        control points.  Default is False.
     """
     #main flags/choices
     filename: str = None
@@ -432,12 +423,12 @@ class PrintParameters:
     frac: float = 0.9
     #DelaunayAdd
     tt_lw_min_frac: float = 0.05
-    conversion_factor: float = None #internal only
-    max_weight: int = None #internal only
+    _conversion_factor: float = None #internal only
+    _max_weight: int = None #internal only
+# End PrintParameters Class ##################################################
 
 
 # triangulation2D_Base Class #################################################
-
 class triangulation2D_Base(ABC):
     """The central class in the overal Topological Advection algorithm, this
     class represents a triangulation of data points in a 2D domain.  It has
@@ -491,25 +482,13 @@ class triangulation2D_Base(ABC):
         weightlist due to the action of the WeightOperators in 
         WeightOperatorList).
 
-    BandWeightInitialize(rbands, LoopIn)
-        This initializes the loop weights in LoopIn using the set of bands in
-        rbands. A band represent a closed curve topologically (with a set of 
-        point ids).
-
-    CurveWeightInitialize(curves, LoopIn)
-        This initializes the loop weights in LoopIn using the set of curves in
-        curves.  A curve represents a geometric curve (with a set of [x,y] 
-        positions).
-
-    ShearWeightInitialize(RegLoop, LoopIn):
-        This modifies the weightlist of LoopIn to represent the loop given in
-        RegLoop, but in shear coordinates.
-
     Plot(LoopIn = None, PP: PrintParameters = PrintParameters())
         This plots the triangulation and loop.  See PrintParameters data class
         documentation for details on the many options.
-    """
 
+    TriCopy(EvolutionReset = True)
+        This returns a copy of this triangulation2D object.
+    """
     def __init__(self, ptlist, empty = False):
         """
         Parameters
@@ -520,31 +499,30 @@ class triangulation2D_Base(ABC):
 
         empty : bool
             Used for creating an empty object, which is then used for object 
-            copying.  Defaul is False
+            copying.  Default is False
         """
-        
-        self.atstep = 0
+        self._atstep = 0
         self.pointlist = None
         self.pointpos = None
-        self.pointposfuture = None
+        self._pointposfuture = None
         self.simplist = []
-        self.totalnumedges = 0
+        self._totalnumedges = 0
         self.WeightOperatorList = []
-        self.Vec = True
+        self._Vec = True
         # for small number of points, the non-vectorized version
         # of a few functions will be faster
         if len(ptlist) < 10:
-            self.Vec = False
+            self._Vec = False
         if not empty:
-            self.LoadPos(ptlist)
-            self.SetInitialTriangulation()
+            self._LoadPos(ptlist)
+            self._SetInitialTriangulation()
 
     @abstractmethod
-    def LoadPos(self, ptlist):
+    def _LoadPos(self, ptlist):
         pass
 
     @abstractmethod
-    def SetInitialTriangulation(self):
+    def _SetInitialTriangulation(self):
         pass
 
     def Evolve(self, ptlist, Maintain_Delaunay = False):
@@ -568,27 +546,27 @@ class triangulation2D_Base(ABC):
         #  Overview: load the new positions, find the events, deal with the
         #  events, update the current position, and maintain delaunay if
         #  needed.
-        self.LoadNewPos(ptlist)
-        EventLists = self.GetEvents() 
+        self._LoadNewPos(ptlist)
+        EventLists = self._GetEvents() 
         #  GEvolve deals with the events in CollapseEventList 
         #  and CrossingList (if periodic boundaries) in order
-        self.GEvolve(EventLists)
-        self.UpdatePtPos()
-        self.atstep += 1
+        self._GEvolve(EventLists)
+        self._UpdatePtPos()
+        self._atstep += 1
         if Maintain_Delaunay:
             self.MakeDelaunay()
             #  after the atstep increment so that the operators
             #  will have the correct time-stamp.
 
     @abstractmethod
-    def LoadNewPos(self, ptlist):
+    def _LoadNewPos(self, ptlist):
         pass
 
     @abstractmethod
-    def GetEvents(self):
+    def _GetEvents(self):
         pass
 
-    def GetCollapseEvents(self):
+    def _GetCollapseEvents(self):
         """
         This finds all of the events where a triangle will go through zero 
         area in the course of the points evolving from this time to the next
@@ -603,21 +581,21 @@ class triangulation2D_Base(ABC):
             first) inccurs the smallest computational cost.
         """
         collapsesimplist = []
-        if self.Vec:  
-            AZT_bool, AZT_time = self.AreaZeroTimeMultiple()
+        if self._Vec:  
+            AZT_bool, AZT_time = self._AreaZeroTimeMultiple()
             collapsesimplist = [[self.simplist[i],AZT_time[i]] 
                                 for i in range(len(self.simplist)) 
                                 if AZT_bool[i]]    
         else:
             for simp in self.simplist:
-                AZT = self.AreaZeroTimeSingle(simp)
+                AZT = self._AreaZeroTimeSingle(simp)
                 if AZT[0]:
                     collapsesimplist.append([simp,AZT[1]])  
         collapsesimplist.sort(key=itemgetter(1), reverse=True)
         return collapsesimplist
 
     @abstractmethod
-    def AreaZeroTimeMultiple(self, Tin = 0):
+    def _AreaZeroTimeMultiple(self, Tin = 0):
         """
         Goes through every simplex and looks for whether the area zero time
         is between Tin and 1.  Similar to AreaZeroTimeSingle, but wrapping up
@@ -640,7 +618,7 @@ class triangulation2D_Base(ABC):
         pass
 
     @abstractmethod
-    def AreaZeroTimeSingle(self, simp, Tin = 0):
+    def _AreaZeroTimeSingle(self, simp, Tin = 0):
         """
         Finds whether (and when) a triangle (simp) goes through zero area.
 
@@ -662,11 +640,11 @@ class triangulation2D_Base(ABC):
         """
         pass
 
-    def UpdatePtPos(self):
-        self.pointpos = self.pointposfuture
+    def _UpdatePtPos(self):
+        self.pointpos = self._pointposfuture
 
     @abstractmethod
-    def GEvolve(self, EventLists):
+    def _GEvolve(self, EventLists):
         """
         Processes an ordered list of events (collapse, and crossing - if 
         periodic boundary conditions) and does edge flips to update the 
@@ -676,7 +654,7 @@ class triangulation2D_Base(ABC):
         """
         pass
 
-    def SFix(self, SimpIn, tcollapse):
+    def _SFix(self, SimpIn, tcollapse):
         #  Fixing a simplex and the surrounding affected simplices. This returns the two 
         #  new simplices, so that they can be possibly added to the local event 
         #  list, also the bad simplex so it can be removed (if needed from the 
@@ -684,11 +662,11 @@ class triangulation2D_Base(ABC):
         
         #  `colind` is the local index of the offending point during the 
         #  area collapse
-        colind = self.CollapsePt(SimpIn, tcollapse) 
+        colind = self._CollapsePt(SimpIn, tcollapse) 
         Topsimp = SimpIn.simplices[colind]
         edge_id = SimpIn.edgeids[colind]
-        globaltime = self.atstep + tcollapse
-        newsimps = self.EdgeFlip([SimpIn,Topsimp], edge_id, globaltime)  
+        globaltime = self._atstep + tcollapse
+        newsimps = self._EdgeFlip([SimpIn,Topsimp], edge_id, globaltime)  
         #  EdgeFlip does most of the work in flipping the edge and 
         #  cleaning up linking
         return [newsimps,Topsimp]
@@ -697,12 +675,12 @@ class triangulation2D_Base(ABC):
         #  Also return the bad simplex to remove any instance from the 
         #  event list.
         
-    def CollapsePt(self, SimpIn, tcol):
+    def _CollapsePt(self, SimpIn, tcol):
         #  This returns the point (internal id) that passes through its 
         #  opposite edge during an area collapse event known to occur 
         #  at t = tcol
         #  first get the positions of the 3 points at the time of collapse
-        colpos = self.GetSimpCurrentLoc(SimpIn, tcol)
+        colpos = self._GetSimpCurrentLoc(SimpIn, tcol)
         d0 = ((colpos[2][0] - colpos[0][0])*(colpos[1][0] - colpos[0][0]) +
               (colpos[2][1] - colpos[0][1])*(colpos[1][1] - colpos[0][1]))
         #  This is the dot product of (z2-z0) and (z1-z0)
@@ -716,7 +694,7 @@ class triangulation2D_Base(ABC):
             #  If the first two are >0, this must be <0
     
     @abstractmethod
-    def GetSimpCurrentLoc(self, SimpIn, tcol):
+    def _GetSimpCurrentLoc(self, SimpIn, tcol):
         """
         this returns the linearly interpolated positions of the three points
         in SimpIn at time tcol
@@ -724,7 +702,7 @@ class triangulation2D_Base(ABC):
         pass
 
     @abstractmethod
-    def EdgeFlip(self, AdjSimps, EdgeShare, TimeIn = None):
+    def _EdgeFlip(self, AdjSimps, EdgeShare, TimeIn = None):
         """
         EdgeFlip locally re-triangulates the triangulation by removing an
         edge that divides two adjacent triangles in a quadrilateral, and 
@@ -751,7 +729,6 @@ class triangulation2D_Base(ABC):
         -------
         list of 2 simplex2D objects
             The two new simplices.  Returned so that the calling function
-            
         """
         pass
     
@@ -863,7 +840,7 @@ class triangulation2D_Base(ABC):
         else:
             print("Need to choose one of the options 1, 2, or 3")
 
-    def BandWeightInitialize(self,rbands, LoopIn):
+    def _BandWeightInitialize(self,rbands, LoopIn):
         """
         This initializes the edge weights in `LoopIn` that correspond to a
         given band (or set of bands) in `rbands`.
@@ -876,7 +853,7 @@ class triangulation2D_Base(ABC):
             documentation), and the weight to add to the loop weightlist.
 
         LoopIn : Loop object
-            The weightlist of LoopIn will be modified to represent this 
+            The weightlist of `LoopIn` will be modified to represent this 
             additional set of bands being added in.
         """
         for band_data in rbands:
@@ -885,10 +862,10 @@ class triangulation2D_Base(ABC):
             AreAdjacent, CurveLeft = [], []
             for k in range(numpoints):
                 AreAdjacent.append(
-                    self.ArePointsAdjacent(band[k], band[(k+1)%numpoints]))
+                    self._ArePointsAdjacent(band[k], band[(k+1)%numpoints]))
                 triplepts = [band[(k+numpoints-1)%numpoints], 
                              band[k], band[(k+1)%numpoints]]
-                CurveLeft.append(self.DoesCurveLeft(triplepts))
+                CurveLeft.append(self._DoesCurveLeft(triplepts))
             for j in range(numpoints):
                 Bool1 = [CurveLeft[j], AreAdjacent[j], 
                          CurveLeft[(j+1)%numpoints]]
@@ -896,31 +873,31 @@ class triangulation2D_Base(ABC):
                          CurveLeft[j], AreAdjacent[j]]
                 triplepts = [band[(j+numpoints-1)%numpoints], band[j], 
                              band[(j+1)%numpoints]]                
-                self.AddWeightsAlongLine(
+                self._AddWeightsAlongLine(
                     [band[j],rbands[i][(j+1)%numpoints]], Bool1, LoopIn, wadd)
-                self.AddWeightsAroundPoint(triplepts, Bool2, LoopIn, wadd)
+                self._AddWeightsAroundPoint(triplepts, Bool2, LoopIn, wadd)
 
     @abstractmethod
-    def ArePointsAdjacent(self,pt1,pt2):
+    def _ArePointsAdjacent(self,pt1,pt2):
         pass
 
     @abstractmethod
-    def DoesCurveLeft(self,pttriple):
+    def _DoesCurveLeft(self,pttriple):
         pass
     
     @abstractmethod
-    def AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
+    def _AddWeightsAlongLine(self,linepoints, Boolin, LoopIn, wadd = 1.0):
         pass
 
     @abstractmethod
-    def SimpInDir(self,linepoints):    
+    def _SimpInDir(self,linepoints):    
         pass
 
     @abstractmethod
-    def AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1.0):
+    def _AddWeightsAroundPoint(self, pttriple, Boolin, LoopIn, wadd = 1.0):
         pass
 
-    def CurveWeightInitialize(self, curves, LoopIn):
+    def _CurveWeightInitialize(self, curves, LoopIn):
         """
         This initializes the edge weights in `LoopIn` that correspond to a
         given set of curves in `curves`.
@@ -940,16 +917,16 @@ class triangulation2D_Base(ABC):
         """
         for curve in curves:
             point_set, is_closed, end_pts_pin, wadd = curve
-            edge_list = self.Get_Edges(point_set, is_closed, end_pts_pin)
+            edge_list = self._Get_Edges(point_set, is_closed, end_pts_pin)
             for edge in edge_list:
                 LoopIn.weightlist[edge] += wadd
 
     @abstractmethod
-    def Get_Edges(self, points, closed = True, end_pts_pin = True):
+    def _Get_Edges(self, points, closed = True, end_pts_pin = True):
         #  This finds the set of edges (in order) which correspond to a curve.
         pass
 
-    def ShearWeightInitialize(self, RegLoop, LoopIn):
+    def _ShearWeightInitialize(self, RegLoop, LoopIn):
         """
         This takes the regular edge weights (for some band) encoded in 
         `RegLoop`, and uses the triangulation connectivity to initialize 
@@ -1005,18 +982,18 @@ class triangulation2D_Base(ABC):
             excludes it if False.
         """
         # the preliminary plotting settings
-        fig, ax = self.PlotPrelims(PP)
+        fig, ax = self._PlotPrelims(PP)
         # the underlying triangulation
-        if PP.triplot:  self.TriangulationPlotBase(ax, PP)
-        self.PointPlotBase(ax, PP)  # the points
+        if PP.triplot:  self._TriangulationPlotBase(ax, PP)
+        self._PointPlotBase(ax, PP)  # the points
         #only plot the traintrack if a Loop is given
-        if LoopIn is not None:  self.TTPlotBase(ax, LoopIn, PP)
+        if LoopIn is not None:  self._TTPlotBase(ax, LoopIn, PP)
         if PP.filename is None:  plt.show()
         else:  plt.savefig(PP.filename)
         plt.close()
 
     @abstractmethod
-    def PlotPrelims(self, PP: PrintParameters):
+    def _PlotPrelims(self, PP: PrintParameters):
         """
         Handles the initial setup for the figure
 
@@ -1050,7 +1027,7 @@ class triangulation2D_Base(ABC):
         pass
     
     @abstractmethod
-    def TriangulationPlotBase(self, ax, PP: PrintParameters):
+    def _TriangulationPlotBase(self, ax, PP: PrintParameters):
         """
         Plots the underlying triangulation
 
@@ -1071,7 +1048,7 @@ class triangulation2D_Base(ABC):
         pass
         
     @abstractmethod
-    def PointPlotBase(self, ax, PP: PrintParameters):
+    def _PointPlotBase(self, ax, PP: PrintParameters):
         """
         Plots the points
 
@@ -1094,7 +1071,7 @@ class triangulation2D_Base(ABC):
         pass
 
     @abstractmethod
-    def TTPlotBase(self, ax, LoopIn, PP: PrintParameters):
+    def _TTPlotBase(self, ax, LoopIn, PP: PrintParameters):
         """
         Plots the train-track representation of the loop
 
