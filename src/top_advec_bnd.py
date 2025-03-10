@@ -1,3 +1,34 @@
+"""Module for topological advection with boundary.
+
+This module contains child classes (derived from top_advec_base.py) that are
+tailored to the case where particles remain in a bounded region
+of the plane. The topological advection algorithm takes trajectories of point
+particles in 2D and determines how this motion affects the state of material
+curves in the surrounding medium.  Curves are encoded topologically as 'loops'
+with a triangulation of the points acting as a basis for the loops.  As the
+points move, the triangulation is updated, and operators which act on loops
+are accumulated.
+
+Classes
+-------
+simplex2D
+    Class representing a triangle / 2D simplex
+
+Loop
+    Class representing a topological loop or set of loops.
+
+WeightOperator
+    Class representing an operator that acts on loops.
+
+PlotParameters:
+    Data class for grouping plot parameters
+
+triangulation2D
+    Class representing a triangulation of data points in a 2D domain.
+    With methods for evolving the triangulation forward due to moving points,
+    intializing loops, evolving loops, and plotting.
+"""
+
 import math
 import copy
 from operator import itemgetter
@@ -8,14 +39,16 @@ from scipy.spatial import KDTree
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib import rcParams
-from TopAdvBase import (simplex2D_Base, Loop_Base, WeightOperator_Base,
-                        triangulation2D_Base, PlotParameters)
-import HelperFns as HF
+from top_advec_base import (simplex2D_Base, Loop_Base, WeightOperator_Base,
+                            triangulation2D_Base, PlotParameters)
+import helper_fns as HF
 
 
 # simplex2D class ############################################################
 class simplex2D(simplex2D_Base):
     """Class representing a triangle / 2D simplex.
+
+        (bounded domain version)
 
         (used in a 2D triangulation object)
 
@@ -60,6 +93,9 @@ class simplex2D(simplex2D_Base):
         Find the simplices about a given point. In the case of a boundary
         simplex (with None as one/two of the simplex neighbors), the list
         is not necessarily in CCW order.
+
+    EdgeNeighbors(IDin)
+        Find the ids of edges about a given point
 
     SimpLink(S_other)
         Link self with S_other simplex
@@ -217,8 +253,7 @@ class Loop(Loop_Base):
         Divides all the weights by the max weight value.
     """
 
-    def __init__(self, tri, rbands=None, curves=None,
-                 Shear=False, mesh=False):
+    def __init__(self, tri, rbands=None, curves=None, Shear=False, mesh=False):
         """Initialize Loop.
 
         Parameters

@@ -1,5 +1,5 @@
-import TopAdv as TA
-import TopAdv_PBC as TAp
+import top_advec_bnd as TA
+import top_advec_pbc as TAp
 import HelperFns as HF
 import numpy as np
 import os

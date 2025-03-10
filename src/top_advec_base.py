@@ -80,6 +80,9 @@ class simplex2D_Base(ABC):
     SimpNeighbors(IDin)
         Find the simplices about a given point
 
+    EdgeNeighbors(IDin)
+        Find the ids of edges about a given point
+
     SimpLink(S_other)
         Link self with S_other simplex
     """
