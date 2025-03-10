@@ -28,13 +28,12 @@ author = 'Spencer A. Smith'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'numpydoc'
+    'sphinx.ext.napoleon'
 ]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
+autodoc_default_flags = ['members', 'inherited-members']
 
 
 # -- Options for HTML output -------------------------------------------------

@@ -1,45 +1,46 @@
 import TopAdv as TA
 import TopAdv_PBC as TAp
-import TopAdvBase as TAbase
 import HelperFns as HF
 import numpy as np
-import math
 import os
 from scipy.optimize import curve_fit
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 
 class TopologicalAdvection:
 
-    def __init__(self, TrajectorySlices, Times, Domain = None, PeriodicBC = False):
+    def __init__(self, TrajectorySlices, Times, Domain=None, PeriodicBC=False):
         self.Tslices = TrajectorySlices
         self.Times = Times
         self.NumTimes = len(self.Times)
         self.Domain = Domain
         self.PeriodicBC = PeriodicBC
-        #use the appropriate module based on periodic BC or regular
+        #  use the appropriate module based on periodic BC or regular
         if PeriodicBC:
             self.TA = TAp
         else:
             self.TA = TA
         if self.Domain is None:
             if PeriodicBC:
-                print("Trajectories live on a doubly periodic domain, but no fundamental domain boundary was specifed. \n")
-                print("Generating a fundamental domain based on max x and y values of the particle trajectories.")
-            self.Domain = HF.GetBoundingDomainTraj(self.Tslices, PeriodicBC = self.PeriodicBC)
-        self.PrintParameters = self.TA.PrintParameters(Bounds = self.Domain)
-        #now initialize a triangulation object
+                print("Trajectories live on a doubly periodic domain,"
+                      " but no fundamental domain boundary was specifed. \n")
+                print("Generating a fundamental domain based on max x and"
+                      " y values of the particle trajectories.")
+            self.Domain = HF.GetBoundingDomainTraj(self.Tslices,
+                                                   PeriodicBC=self.PeriodicBC)
+        self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
+        #  now initialize a triangulation object
         self.Tri = self.TA.triangulation2D(self.Tslices[0], self.Domain)
         if not PeriodicBC:
-            ExBnd = HF.GetBoundingDomainSlice(self.Tri.pointpos, frac = 0.0)
+            ExBnd = HF.GetBoundingDomainSlice(self.Tri.pointpos, frac=0.0)
             dx = (ExBnd[1][0] - ExBnd[0][0])/np.sqrt(len(self.Tri.pointpos))
             dy = (ExBnd[1][1] - ExBnd[0][1])/np.sqrt(len(self.Tri.pointpos))
-            dz = min(dx,dy)
+            dz = min(dx, dy)
             ExBnd[0][0] -= dz
             ExBnd[1][0] += dz
             ExBnd[0][1] -= dz
             ExBnd[1][1] += dz
-            setattr(self.PrintParameters, "ExpandedBounds", ExBnd)
-        #and make a copy of it to do initial loop evaluations
+            setattr(self.PlotParameters, "ExpandedBounds", ExBnd)
+        #  and make a copy of it to do initial loop evaluations
         self.TriInit = self.Tri.TriCopy()
         self.TriEvolved = False
         self.IsDelaunay = True
@@ -47,30 +48,30 @@ class TopologicalAdvection:
         self.TotalWeightOverTime = None
         self.Loop = None
         self.CurveGenerator = CurveGenerator(self.Domain, self.PeriodicBC)
-        
-        
 
-    def EvolveTri(self, Delaunay = False):
+
+
+    def EvolveTri(self, Delaunay=False):
         for i in range(1, self.NumTimes):
             HF.progressBar(i, self.NumTimes)
-            self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = Delaunay)
+            self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
         self.TriEvolved = True
         self.IsDelaunay = Delaunay
 
     def ResetTri(self):
         self.Tri = self.TriInit.TriCopy()
         self.TriEvolved = False
-        
-    #make a function to calculate the topological entropy from the best fit
-    def GetTopologicalEntropy(self, frac_start = 0.0):
+
+    #  make a function to calculate the topological entropy from the best fit
+    def GetTopologicalEntropy(self, frac_start=0.0):
         if not self.TriEvolved:
             self.EvolveTri()
-        loopM = self.TA.Loop(self.TriInit, mesh = True)
-        WeightsM = self.Tri.OperatorAction(loopM, num_times = self.NumTimes)
+        loopM = self.TA.Loop(self.TriInit, mesh=True)
+        WeightsM = self.Tri.OperatorAction(loopM, num_times=self.NumTimes)
         LogWeightsM = [np.log(w) for w in WeightsM]
         iend = len(LogWeightsM)
         istart = int(iend*frac_start)
-        TE, TE_err = self.GetSlopeFit(LogWeightsM,istart,iend)
+        TE, TE_err = self.GetSlopeFit(LogWeightsM, istart, iend)
         self.TopologicalEntropy = [TE, TE_err]
         self.TotalWeightOverTime = WeightsM
         return TE, TE_err, WeightsM
@@ -78,88 +79,96 @@ class TopologicalAdvection:
     def GetSlopeFit(self, LWeightsIn, istart, iend):
         def linear_func(x, a, b):
             return a*x+b
-        #fitting to a linear function ax+b
-        popt, pcov = curve_fit(linear_func, self.Times[istart:iend], LWeightsIn[istart:iend])
+        #  fitting to a linear function ax+b
+        popt, pcov = curve_fit(linear_func, self.Times[istart:iend],
+                               LWeightsIn[istart:iend])
         perr = np.sqrt(np.diag(pcov))
-        return [popt[0],perr[0]]
+        return [popt[0], perr[0]]
 
     def ClearLoop(self):
-        self.Loop =  None
+        self.Loop = None
 
     def ClearCurves(self):
         self.CurveGenerator.ClearCurves()
 
     def LoadCurves(self):
         if len(self.CurveGenerator.Curves) > 0:
-            loop = self.TA.Loop(self.TriInit, curves = self.CurveGenerator.Curves)
-            self.Loop = LoopData(LoopInitial = loop, LoopFinal = loop.LoopCopy(), LoopEvolved = False)
+            loop = self.TA.Loop(self.TriInit,
+                                curves=self.CurveGenerator.Curves)
+            self.Loop = LoopData(topadvec_in=self, LoopInitial=loop)
 
     def EvolveLoop(self):
         if not self.TriEvolved:
             self.EvolveTri()
         if not self.Loop.LoopEvolved:
-            self.Tri.OperatorAction(self.Loop.LoopFinal, option = 1)
+            self.Tri.OperatorAction(self.Loop.LoopFinal, option=1)
             self.Loop.LoopEvolved = True
- 
-    def SetPrintParameters(self,**kwargs):
+
+    def SetPlotParameters(self,**kwargs):
         for key, value in kwargs.items():
-            setattr(self.PrintParameters, key, value)
+            setattr(self.PlotParameters, key, value)
 
-    def ResetPrintParametersDefault(self):
-        self.PrintParameters = self.TA.PrintParameters(Bounds = self.Domain)
+    def ResetPlotParametersDefault(self):
+        self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
 
-    def PrintPrintParameters(self):
-        for key, value in asdict(self.PrintParameters).items():
+    def PrintPlotParameters(self):
+        for key, value in asdict(self.PlotParameters).items():
             if not (key == "conversion_factor" or key == "max_weight"):
                 print(f"{key}: {value}")
-    
-    #to change plotting parameters, before using this function, set the prameters in 
-    #the PrintParameters attribute (a data object)
-    def Plot(self, PlotLoop = True, Initial = False):
-        setattr(self.PrintParameters, "Delaunay", self.IsDelaunay)
+
+    #  to change plotting parameters, before using this function, set the
+    #  prameters in the PlotParameters attribute (a data object)
+    def Plot(self, PlotLoop=True, Initial=False):
+        setattr(self.PlotParameters, "Delaunay", self.IsDelaunay)
         if not PlotLoop:
             if Initial:
-                self.TriInit.Plot(LoopIn = None, PP = self.PrintParameters)
+                self.TriInit.Plot(LoopIn=None, PP=self.PlotParameters)
             else:
-                self.Tri.Plot(LoopIn = None, PP =self.PrintParameters)
+                self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
         else:
             if self.Loop is not None:
                 if not self.Loop.LoopInitial.Shear:
                     if Initial:
-                        self.TriInit.Plot(LoopIn = self.Loop.LoopInitial , PP = self.PrintParameters)
+                        self.TriInit.Plot(LoopIn=self.Loop.LoopInitial,
+                                          PP=self.PlotParameters)
                     else:
-                        self.EvolveLoop()  #does nothing if already evolved
-                        self.Tri.Plot(LoopIn = self.Loop.LoopFinal, PP = self.PrintParameters)
+                        self.EvolveLoop()  # does nothing if already evolved
+                        self.Tri.Plot(LoopIn=self.Loop.LoopFinal,
+                                      PP=self.PlotParameters)
                 else:
-                    print("Currently don't support plotting loops represented with shear coordinates")
+                    print("Currently don't support plotting loops"
+                          " represented with shear coordinates")
             else:
                 print("Need to create a loop")
-            
 
 
-    def MovieFigures(self, PlotLoop = True, Delaunay = True, ImageFolder = "MovieImages/", ImageName = "EvolvingLoop", filetype = ".png"):
-        setattr(self.PrintParameters, "Delaunay", Delaunay)
+
+    def MovieFigures(self, PlotLoop=True, Delaunay=True,
+                     ImageFolder="MovieImages/", ImageName="EvolvingLoop",
+                     filetype=".png"):
+        setattr(self.PlotParameters, "Delaunay", Delaunay)
         if self.Loop is not None and PlotLoop:
             self.ResetTri()
             loop = self.Loop.LoopInitial.LoopCopy()
             if not os.path.exists(ImageFolder):
                 os.makedirs(ImageFolder)
             fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
-            setattr(self.PrintParameters, "filename", fname)
-            self.Tri.Plot(LoopIn = loop, PP = self.PrintParameters)
+            setattr(self.PlotParameters, "filename", fname)
+            self.Tri.Plot(LoopIn=loop, PP=self.PlotParameters)
             startind, stopind = 0, 0
             for i in range(1, self.NumTimes):
                 startind = stopind+1
                 HF.progressBar(i, self.NumTimes)
-                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = Delaunay)
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
                 stopind = len(self.Tri.WeightOperatorList)-1
-                self.Tri.OperatorAction(loop, index = [startind,stopind], option = 1)
+                self.Tri.OperatorAction(loop, index=[startind, stopind],
+                                        option=1)
                 fname = ImageFolder + ImageName + HF.CounterToStr(i) + filetype
-                setattr(self.PrintParameters, "filename", fname)
-                self.Tri.Plot(LoopIn = loop, PP = self.PrintParameters)
+                setattr(self.PlotParameters, "filename", fname)
+                self.Tri.Plot(LoopIn=loop, PP=self.PlotParameters)
             self.TriEvolved = True
             self.IsDelaunay = Delaunay
-            setattr(self.PrintParameters, "filename", None)
+            setattr(self.PlotParameters, "filename", None)
         elif self.Loop is None and PlotLoop:
             print("Need to create an initial loop first")
         else:
@@ -167,31 +176,28 @@ class TopologicalAdvection:
             if not os.path.exists(ImageFolder):
                 os.makedirs(ImageFolder)
             fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
-            setattr(self.PrintParameters, "filename", fname)
-            self.Tri.Plot(LoopIn = None, PP = self.PrintParameters)
+            setattr(self.PlotParameters, "filename", fname)
+            self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
             for i in range(1, self.NumTimes):
                 HF.progressBar(i, self.NumTimes)
-                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay = Delaunay)
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
                 fname = ImageFolder + ImageName + HF.CounterToStr(i) + filetype
-                setattr(self.PrintParameters, "filename", fname)
-                self.Tri.Plot(LoopIn = None, PP = self.PrintParameters)
+                setattr(self.PlotParameters, "filename", fname)
+                self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
             self.TriEvolved = True
             self.IsDelaunay = Delaunay
-            setattr(self.PrintParameters, "filename", None)
-            
-        
+            setattr(self.PlotParameters, "filename", None)
 
 
-
-
-@dataclass
 class LoopData:
-    LoopInitial: TAbase.Loop = None
-    LoopFinal: TAbase.Loop = None
-    LoopEvolved: bool = False
+
+    def __init__(self, topadvec_in, LoopInitial):
+        self.LoopInitial: topadvec_in.TA.Loop = LoopInitial
+        self.LoopFinal: topadvec_in.TA.Loop = LoopInitial.LoopCopy()
+        self.LoopEvolved: bool = False
 
 class CurveGenerator:
-    
+
     def __init__(self, Domain, PeriodicBC):
         self.Domain = Domain
         self.PeriodicBC = PeriodicBC
@@ -204,19 +210,23 @@ class CurveGenerator:
     def AddCircle(self, center, radius):
         self.AddEllipse(center, radius, radius)
 
-    def AddEllipse(self, center, a, b, phi = 0):
+    def AddEllipse(self, center, a, b, phi=0):
         theta = np.linspace(0, 2*np.pi, num=self.NumPoints, endpoint=False)
-        points = np.array([center[0] + a*np.cos(theta)*np.cos(phi) - b*np.sin(theta)*np.sin(phi),
-                           center[1] + a*np.cos(theta)*np.sin(phi) + b*np.sin(theta)*np.cos(phi)]).T
+        points = np.array([center[0] + a*np.cos(theta)*np.cos(phi)
+                           - b*np.sin(theta)*np.sin(phi),
+                           center[1] + a*np.cos(theta)*np.sin(phi)
+                           + b*np.sin(theta)*np.cos(phi)]).T
         self.AddClosedCurve(points)
 
-    def AddRectangle(self, center, w, h, phi = 0):
-        points = np.array([[-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2]])
-        points = np.array([center[0] + points[:,0]*np.cos(phi) - points[:,1]*np.sin(phi),
-                          center[1] + points[:,0]*np.sin(phi) + points[:,1]*np.cos(phi)]).T
+    def AddRectangle(self, center, w, h, phi=0):
+        points = np.array([[-w/2, -h/2], [w/2, -h/2], [w/2, h/2], [-w/2, h/2]])
+        points = np.array([center[0] + points[:, 0]*np.cos(phi)
+                           - points[:, 1]*np.sin(phi),
+                          center[1] + points[:, 0]*np.sin(phi)
+                          + points[:, 1]*np.cos(phi)]).T
         self.AddClosedCurve(points)
 
-    def AddSquare(self, center, L, phi = 0):
+    def AddSquare(self, center, L, phi=0):
         self.AddRectangle(center, L, L, phi)
 
     def AddVerticalLine(self, x_val):
@@ -224,8 +234,9 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
-            delta = 1e-6*(self.Domain[1][1] -  self.Domain[0][1])
-            points = [[x_val, self.Domain[0][1]+delta],[x_val, self.Domain[1][1]-delta]]
+            delta = 1e-6*(self.Domain[1][1] - self.Domain[0][1])
+            points = [[x_val, self.Domain[0][1] + delta],
+                      [x_val, self.Domain[1][1] - delta]]
             if self.PeriodicBC:
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
@@ -237,14 +248,15 @@ class CurveGenerator:
             return []
         else:
             delta = 1e-6*(self.Domain[1][0] -  self.Domain[0][0])
-            points = [[self.Domain[0][0]+delta, y_val ], [self.Domain[1][0]-delta, y_val]]
+            points = [[self.Domain[0][0] + delta, y_val],
+                      [self.Domain[1][0] - delta, y_val]]
             if self.PeriodicBC:
                 self.Curves.append([points, False, [False, False], 1.0])
             else:
                 self.Curves.append([points, False, [True, True], 0.5])
-        
+
     def AddLineSegment(self, pt1, pt2):
-        points = [pt1,pt2]
+        points = [pt1, pt2]
         self.AddOpenCurve(points)
 
     def AddOpenCurve(self, points):
@@ -257,20 +269,18 @@ class CurveGenerator:
         if not self.ContainedInDomain(np.array(points)):
             print("Curve is not contained in the domain ", self.Domain)
         else:
-            self.Curves.append([points, True, [False, False], 1.0])  #point_set, is_closed, end_pts_pin, wadd
-        
-    
+            self.Curves.append([points, True, [False, False], 1.0])
+            #  point_set, is_closed, end_pts_pin, wadd
+
+
     def ContainedInDomain(self, points):
-        x_max = np.max(points[:,0])
-        x_min = np.min(points[:,0])
-        y_max = np.max(points[:,1])
-        y_min = np.min(points[:,1])
+        x_max = np.max(points[:, 0])
+        x_min = np.min(points[:, 0])
+        y_max = np.max(points[:, 1])
+        y_min = np.min(points[:, 1])
         if x_max > self.Domain[1][0] or x_min < self.Domain[0][0]:
             return False
         elif y_max > self.Domain[1][1] or y_min < self.Domain[0][1]:
             return False
         else:
             return True
-        
-        
-            

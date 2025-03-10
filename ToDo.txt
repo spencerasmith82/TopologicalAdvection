@@ -6,3 +6,5 @@
 * Continue to improve the TopologicalAdvection class (later perhaps add a finding coherent structures method)
 
 * flesh out the examples
+
+* Reorganize the code to have the base class be fully abstract (only abstract methods)

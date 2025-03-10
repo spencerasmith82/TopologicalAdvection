@@ -1,4 +1,4 @@
-# Set of general use stand-alone functions. 
+# Set of general use stand-alone functions.
 # These don't reference any of the triangulation2D object variables #******************************************************************
 #******************************************************************
 import numpy as np
@@ -51,8 +51,6 @@ def GetBoundingDomainTraj(Tslices, PeriodicBC = False, frac = None):
             a_ratio = Deltax/Deltay
             npts_x = int(np.sqrt(npts*a_ratio))
             npts_y = int(npts/npts_x)
-            #npts_x*npts_y = npts
-            #npts_x = a_ratio*npts_y
             x_pad = Deltax/(npts_x-1)
             y_pad = Deltay/(npts_y-1)
         else:
@@ -61,7 +59,7 @@ def GetBoundingDomainTraj(Tslices, PeriodicBC = False, frac = None):
         BD[0][0] -= x_pad
         BD[1][0] += x_pad
         BD[0][1] -= y_pad
-        BD[1][1] += y_pad        
+        BD[1][1] += y_pad
         return BD
 
 
@@ -80,15 +78,15 @@ def CounterToStr(countin):
 def BinarySearch(ListIn, TimeIn):
     """
     BinarySearch does a binary search on a given sorted list (each element is
-    a list of length 2, were the second item is the ordering parameter).  The 
-    list is assumed to be in decending order (smallest last).  The item that 
-    is searched for is a single number  - TimeIn (time to zero area).  The 
-    search is over the time variable.  The index i of ListIn such that 
-    ListIn[i][1] > TimeIn and ListIn[i+1][1] <= TimeIn is returned.  It is 
-    assumed that the case of TimeIn > ListIn[0][1] and TimeIn < ListIn[-1][1] 
+    a list of length 2, were the second item is the ordering parameter).  The
+    list is assumed to be in decending order (smallest last).  The item that
+    is searched for is a single number  - TimeIn (time to zero area).  The
+    search is over the time variable.  The index i of ListIn such that
+    ListIn[i][1] > TimeIn and ListIn[i+1][1] <= TimeIn is returned.  It is
+    assumed that the case of TimeIn > ListIn[0][1] and TimeIn < ListIn[-1][1]
     have already been filtered out and delt with
     """
-    Lindex, Rindex  = 0, len(ListIn) - 1  # starting left and right indices    
+    Lindex, Rindex  = 0, len(ListIn) - 1  # starting left and right indices
     while Rindex - Lindex > 1:
         Mindex = (Rindex+Lindex)//2  # middle index, see if our item is in the left or right interval
         if TimeIn < ListIn[Mindex][1]:
@@ -101,10 +99,10 @@ def BinarySearch(ListIn, TimeIn):
 def BinarySearchDel(ListIn, ItemIn):
     """
     BinarySearchDel does a binary search on a given sorted list (each element
-    is a list of length 2, were the second item is the ordering parameter).  
-    The list is assumed to be in decending order (smallest last).  The item 
-    that is searched for is also a double [event,time to zero area].  The 
-    search is over the time variable, but the event variable is used for 
+    is a list of length 2, were the second item is the ordering parameter).
+    The list is assumed to be in decending order (smallest last).  The item
+    that is searched for is also a double [event,time to zero area].  The
+    search is over the time variable, but the event variable is used for
     direct comparison. If a match is found, then it is deleted from the list.
     """
     delta = 1e-8  #defining window of uncertainty for the time
@@ -141,19 +139,19 @@ def BinarySearchDel(ListIn, ItemIn):
         del ListIn[matchindex]
     else:
         print("did not delete item from EventList, event was not found")
-        print("Item In = ", ItemIn)   
-            
+        print("Item In = ", ItemIn)
+
 
 def BinarySearchIns(ListIn, ItemIn):
     """
     BinarySearchIns does a binary search on a given sorted list (each element
     is a double, were the second item is the ordering parameter).  The list is
-    assumed to be in decending order (smallest last).  The item that is 
-    searched for is also a double [event,time to zero area].  The binary 
-    search finds the adjacent pair of elements inbetween which the input 
-    item's time fits.  If such a pair is found, then the ItemIn is inserted 
-    into this position.  Edge Case: If there is an item (or items) with the 
-    same time as the input item, the the input item is inserted to the left 
+    assumed to be in decending order (smallest last).  The item that is
+    searched for is also a double [event,time to zero area].  The binary
+    search finds the adjacent pair of elements inbetween which the input
+    item's time fits.  If such a pair is found, then the ItemIn is inserted
+    into this position.  Edge Case: If there is an item (or items) with the
+    same time as the input item, the the input item is inserted to the left
     (lower index) of the item(s).
     """
     if len(ListIn) == 0:  # empty list, just add the item
@@ -174,11 +172,11 @@ def BinarySearchIns(ListIn, ItemIn):
 
 def Reduce_List(List_In):
     """
-    Reduce_List takes a simple list of indices and removes any adjacent 
+    Reduce_List takes a simple list of indices and removes any adjacent
     repeats (recursively, and with wrap-around boundary conditions for the
-    list).  This is used to tighten up a list of edges crossed by a closed 
-    curve.  If the curve crosses an edge twice without any other crossings 
-    inbetween then the curve can slide across this edge (thus removing two 
+    list).  This is used to tighten up a list of edges crossed by a closed
+    curve.  If the curve crosses an edge twice without any other crossings
+    inbetween then the curve can slide across this edge (thus removing two
     recorded crossings)
     """
     again = False
@@ -191,15 +189,15 @@ def Reduce_List(List_In):
             again = True
             break
     if again:
-        Reduce_List(List_In)            
-    
+        Reduce_List(List_In)
+
 
 def IsIntersection(Line1,Line2,timeinfo = False):
     """
     IsIntersection takes in two lines (each defined by two points) and outputs
-    True if they intersect (between each of their point pairs). If the flag 
-    for time info is True, then we also output the time t1.  So Line 1 is one 
-    whose parameterized intersection time is returned.  The time is the 
+    True if they intersect (between each of their point pairs). If the flag
+    for time info is True, then we also output the time t1.  So Line 1 is one
+    whose parameterized intersection time is returned.  The time is the
     fraction of the line from Line1[0] to Line1[1]
     """
     IsInt = False
@@ -236,11 +234,11 @@ def IsIntersection(Line1,Line2,timeinfo = False):
 
 def AreaZeroTimeBaseSingle(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin = 0):
     """
-    AreaZeroTimeBaseSingle outputs a list of two items: the time that the 
-    simplex crosses zero signed area (collapsed), and a boolean indicating 
-    whether this time was "good" - i.e. inbetween Tin and 1.  In the case 
+    AreaZeroTimeBaseSingle outputs a list of two items: the time that the
+    simplex crosses zero signed area (collapsed), and a boolean indicating
+    whether this time was "good" - i.e. inbetween Tin and 1.  In the case
     of two times that are good, this returns the smaller one.
-    The input values are the x and y positions of the three points bounding 
+    The input values are the x and y positions of the three points bounding
     the simplex (both initial and final), and Tin.
     This solves a quadratic in the time variable.
     """
@@ -260,9 +258,9 @@ def AreaZeroTimeBaseSingle(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin 
     #this analytically solves for the smallest real root of the quadratic equation that is between Tin and 1
     if a == 0:
         if b == 0:
-            return [False,None]  
+            return [False,None]
         else:
-            t = -c/b  
+            t = -c/b
             if t < 1 and t > Tin:
                 return [True,-c/b]
             else:
@@ -277,7 +275,7 @@ def AreaZeroTimeBaseSingle(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin 
             if t1 < 1 and t1 > Tin:
                 t1ok = True
             if t2 < 1 and t2 > Tin:
-                t2ok = True 
+                t2ok = True
             # different outputs based on whether the roots are good
             if (not t1ok) and (not t2ok):
                 return [False, None] # both times are not in the interval
@@ -295,11 +293,11 @@ def AreaZeroTimeBaseSingle(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin 
 def AreaZeroTimeBaseVec(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin = 0):
     """
     AreaZeroTimeBaseVec outputs two np arrays (length = number of simplices):
-    the time that the simplices crosses zero signed area (collapsed), and a 
-    boolean indicating whether this time was "good" - i.e. inbetween Tin 
-    and 1.  In the case of two times that are good, this returns the smaller 
+    the time that the simplices crosses zero signed area (collapsed), and a
+    boolean indicating whether this time was "good" - i.e. inbetween Tin
+    and 1.  In the case of two times that are good, this returns the smaller
     one.
-    The input are np arrays for the x and y positions of the three points 
+    The input are np arrays for the x and y positions of the three points
     bounding each initial and final simplex, and Tin.
     This solves a quadratic in the time variable
     This version is vectorized and uses jit for a speed up
@@ -326,7 +324,7 @@ def AreaZeroTimeBaseVec(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin = 0
     roots = -1*np.ones((2, len(a)))    # initialization of array of roots (two rows for two possible positive roots)
     roots[0,maznbz] = -c[maznbz]/b[maznbz]  # single solution for when a == 0 and b != 0
     # for a != 0 and non-negative discriminant there are two real roots (possibly degenerate).  This first obtains the largest magnitude root to help with numerical stability (no catastrophic cancellation)
-    roots[0,mqgz] = (-b[mqgz]-np.sign(b[mqgz])*np.sqrt(q[mqgz]))/(2*a[mqgz]) 
+    roots[0,mqgz] = (-b[mqgz]-np.sign(b[mqgz])*np.sqrt(q[mqgz]))/(2*a[mqgz])
     roots[1,mqgz] = c[mqgz]/(a[mqgz]*roots[0,mqgz])  # this obtains the other root t1*t2 = c/a
     #masks to determine "good" roots
     t1ok = (roots[0] > Tin) & (roots[0] < 1)  # mask for first root being between our time bounds
@@ -342,12 +340,12 @@ def AreaZeroTimeBaseVec(aix,aiy,bix,biy,cix,ciy,afx,afy,bfx,bfy,cfx,cfy, Tin = 0
 @jit(nopython=True)
 def CopyLocations(posix,posiy,posfx,posfy,Dx,Dy):
     """
-    CopyLocations outputs an array (length = number of points) of ids 
-    (values 0-9). An id identifies the copy of the fundamental domain that 
+    CopyLocations outputs an array (length = number of points) of ids
+    (values 0-9). An id identifies the copy of the fundamental domain that
     the final position is in takes in numpy vectors for the initial and final
-    positions (x and y), the domain width and height convention for the copy 
-    ids: 0 (FD/middle center), 1 (lower left), 2 (lower center), 3 (lower 
-    right), 4 (middle right), 5 (upper right), 6 (upper center), 7 (upper 
+    positions (x and y), the domain width and height convention for the copy
+    ids: 0 (FD/middle center), 1 (lower left), 2 (lower center), 3 (lower
+    right), 4 (middle right), 5 (upper right), 6 (upper center), 7 (upper
     left), 8 (middle left)
     """
     copyloc = np.zeros(len(posix))  #initialize copy location array (default is zero, as most points don't exit the FD)
@@ -388,7 +386,7 @@ def CopyLocations(posix,posiy,posfx,posfy,Dx,Dy):
     copyloc[mask] = 8
     return copyloc
 
-    
+
 @jit(nopython=True)
 def IsDelaunayBase(Ax,Ay,Bx,By,Cx,Cy,Dx,Dy):
     """
@@ -426,7 +424,7 @@ def IsDelaunayBaseWMask(Ax,Ay,Bx,By,Cx,Cy,Dx,Dy,Mask):
     return IsD
 
 ##these are some helper function used in plotting
-    
+
 def GetCenter(Points):
     """
     GetCenter returns the geometric average of the input points (usually 3 pts
@@ -442,7 +440,7 @@ def GetCenter(Points):
 
 def GetCircumCircleCenter(PtsIn):
     """
-    GetCircumCircleCenter returns the coordinates of the center of the 
+    GetCircumCircleCenter returns the coordinates of the center of the
     circumcircle about the given three points
     """
     sqval = [z[0]**2+z[1]**2 for z in PtsIn]
@@ -456,7 +454,7 @@ def GetCircumCircleCenter(PtsIn):
 
 def Curl(vec1, vec2):
     """
-    Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2. 
+    Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2.
     Output is single number (z-component of resultant vec)
     """
     return vec1[0]*vec2[1] - vec1[1]*vec2[0]
@@ -479,8 +477,8 @@ def GetIntersectionPoint(Line1,Line2):
 def GetIntersectionTimes(Line1,Line2):
     """
     GetIntersectionTimes returns the two "time" parameters that correspond
-    to the intersection of two lines. Line1 and Line2 are parameterized by 
-    the times t1 and t2 respectively (each is a linear interpolation from 
+    to the intersection of two lines. Line1 and Line2 are parameterized by
+    the times t1 and t2 respectively (each is a linear interpolation from
     their initial point to final point)
     """
     a = Line1[1][0] - Line1[0][0]
@@ -498,14 +496,14 @@ def GetIntersectionTimes(Line1,Line2):
 
 def LinFuncInterp(P1, P2, t):
     """
-    LinFuncInterp returns the point a fraction t (0-1) 
+    LinFuncInterp returns the point a fraction t (0-1)
     from point 1 (P1) to point 2 (P2)
     """
     return [(1-t)*P1[i]+t*P2[i] for i in range(2)]
 
 def BezierLinear(P1, P2):
     """
-    BezierLinear creates a linear Bezier curve (line) for plotting based 
+    BezierLinear creates a linear Bezier curve (line) for plotting based
     on the 2 input points
     """
     return mpatches.PathPatch(mpath.Path([(P1[0], P1[1]), (P2[0], P2[1])], [mpath.Path.MOVETO,mpath.Path.LINETO]))
