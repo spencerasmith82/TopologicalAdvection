@@ -1,7 +1,7 @@
-TopAdv\_PBC module
+helper\_fns module
 ==================
 
-.. automodule:: TopAdv_PBC
+.. automodule:: helper_fns
    :members:
    :undoc-members:
    :show-inheritance:

@@ -4,8 +4,8 @@ src
 .. toctree::
    :maxdepth: 4
 
-   HelperFns
-   TopAdv
-   TopAdvBase
-   TopAdv_PBC
-   TopologicalAdvection
+   helper_fns
+   top_advec_base
+   top_advec_bnd
+   top_advec_pbc
+   topological_advection
