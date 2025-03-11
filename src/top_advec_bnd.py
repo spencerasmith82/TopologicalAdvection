@@ -586,7 +586,7 @@ class Triangulation2D(Triangulation2D_Base):
     pointpos : list
         A list of the [x,y] positions for the points at the current time
 
-    pointposfuture : list
+    _pointposfuture : list
         List of the [x,y] positions at the next time step.  Used with the
         Evolution method.
 
@@ -811,7 +811,7 @@ class Triangulation2D(Triangulation2D_Base):
             #  will have the correct time-stamp.
 
     def _LoadNewPos(self, ptlist):
-        self._LoadPos(ptlist)
+        self._pointposfuture = ptlist + self._extrapoints
 
     def _GetEvents(self):
         #  Note that this wraps GetCollapseEvents so that it has the

@@ -705,13 +705,20 @@ class Triangulation2D(Triangulation2D_Base):
             copying.  Default is False
         """
         if not empty:
-            if not Domain[0] == [0, 0]:
-                print("Domain must be of the form [[0,0],"
-                      " [x_width, y_height]]")
-            self.FDsizes = Domain[1]  # [Dx, Dy]
-        else:
-            Domain_approx = HF.GetBoundingDomainSlice(ptlist, frac=0.0)
-            self.FDsizes = Domain_approx[1]
+            if Domain is not None:
+                if not Domain[0] == [0, 0]:
+                    print("Domain must be of the form [[0,0],"
+                          " [x_width, y_height]]")
+                    print("Calculating the Domain from point positions, "
+                          "(not ideal!)")
+                    Domain_approx = HF.GetBoundingDomainSlice(ptlist, frac=0.0)
+                    self.FDsizes = Domain_approx[1]
+                self.FDsizes = Domain[1]  # [Dx, Dy]
+            else:
+                print("Calculating the Domain from point positions, "
+                      "(not ideal!)")
+                Domain_approx = HF.GetBoundingDomainSlice(ptlist, frac=0.0)
+                self.FDsizes = Domain_approx[1]
         self._dpindices = ((0, 0), (-1, -1), (0, -1), (1, -1), (1, 0),
                            (1, 1), (0, 1), (-1, 1), (-1, 0))
         self._ptnum = len(ptlist)
