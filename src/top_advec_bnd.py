@@ -11,7 +11,7 @@ are accumulated.
 
 Classes
 -------
-simplex2D
+Simplex2D
     Class representing a triangle / 2D simplex
 
 Loop
@@ -23,7 +23,7 @@ WeightOperator
 PlotParameters:
     Data class for grouping plot parameters
 
-triangulation2D
+Triangulation2D
     Class representing a triangulation of data points in a 2D domain.
     With methods for evolving the triangulation forward due to moving points,
     intializing loops, evolving loops, and plotting.
@@ -39,13 +39,13 @@ from scipy.spatial import KDTree
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib import rcParams
-from top_advec_base import (simplex2D_Base, Loop_Base, WeightOperator_Base,
-                            triangulation2D_Base, PlotParameters)
+from top_advec_base import (Simplex2D_Base, Loop_Base, WeightOperator_Base,
+                            Triangulation2D_Base, PlotParameters)
 import helper_fns as HF
 
 
-# simplex2D class ############################################################
-class simplex2D(simplex2D_Base):
+# Simplex2D class ############################################################
+class Simplex2D(Simplex2D_Base):
     """Class representing a triangle / 2D simplex.
 
         (bounded domain version)
@@ -56,11 +56,11 @@ class simplex2D(simplex2D_Base):
     ----------
     points : list of 3 ints
         List of the 3 vertex point IDs. These IDs will be used to get the
-        vertex spatial locations from a master list that is a triangulation2D
+        vertex spatial locations from a master list that is a Triangulation2D
         attribue. Note that the order is only unique up to an even
         permutation. The permuation given on initialization is assumed to
         correspond to a set of geometric points that are given in counter
-        clock-wise, CCW, order. Moving about this list (and other simplex2D
+        clock-wise, CCW, order. Moving about this list (and other Simplex2D
         attributes) is done via modular arithmatic: (i+1)%3 to move CCW about
         the simplex from index i, and (i+2)%3 to move CW.
 
@@ -74,9 +74,9 @@ class simplex2D(simplex2D_Base):
         used when keeping track of loop coordinates (in loop class).
 
     SLindex : int
-        ID of this simplex in a Simplex List attribute of triangulation2D
+        ID of this simplex in a Simplex List attribute of Triangulation2D
         (simplist). This is useful for going back and forth from the local
-        view (simplex2D object) and the global view (triangulation2D object)
+        view (Simplex2D object) and the global view (Triangulation2D object)
 
     IsBoundarySimp: bool
         IsBoundarySimp marks a simplex as being part of the boundary (True)
@@ -114,7 +114,7 @@ class simplex2D(simplex2D_Base):
 
         Notes
         -----
-        Other attributes are set when linking them up in a triangulation2D
+        Other attributes are set when linking them up in a Triangulation2D
         object.
         """
         super().__init__(IDlist)
@@ -130,7 +130,7 @@ class simplex2D(simplex2D_Base):
 
         Returns
         -------
-        list of simplex2D objects
+        list of Simplex2D objects
             the simplices (in CCW cyclical order about the shared point -
             IDin) adjacent to a point (IDin).  In the case of a boundary
             simplex (with None as one/two of the simplex neighbors), the list
@@ -217,7 +217,7 @@ class simplex2D(simplex2D_Base):
             locid_s2 = (S_other.points.index(
                 self.points[(locid_s1 + 1) % 3]) + 1) % 3
             S_other.simplices[locid_s2] = self
-# End of simplex2D class #####################################################
+# End of Simplex2D class #####################################################
 
 
 # Loop Class #################################################################
@@ -225,13 +225,13 @@ class Loop(Loop_Base):
     """Class representing a topological loop or set of loops.
 
     The coordinate system (basis) for this representation is fixed by a
-    particular triangulation2D object.
+    particular Triangulation2D object.
 
     Attributes
     ----------
     weightlist : list of ints/real numbers
         List of intersection coordinates for the loop.  Each location in the
-        list corresponds to an edge in the triangulation2D object (list index
+        list corresponds to an edge in the Triangulation2D object (list index
         is edge id), and the list value at this index is the number of
         transverse intersections of our geometric loop (pulled 'tight' for
         minimal intersection number) with the associated triangulation edge.
@@ -258,7 +258,7 @@ class Loop(Loop_Base):
 
         Parameters
         ----------
-        tri : triangulation2D object (really child class of triangulation2D)
+        tri : Triangulation2D object (really child class of Triangulation2D)
             tri is used as a basis with which the input curve options (rbands,
             curves, and mesh) are turned into intersection coordinates.
             Several tri methods are used to initialize weightlist.
@@ -561,8 +561,8 @@ class PlotParameters(PlotParameters):
 # End of PlotParameters Class ###############################################
 
 
-# triangulation2D Class ######################################################
-class triangulation2D(triangulation2D_Base):
+# Triangulation2D Class ######################################################
+class Triangulation2D(Triangulation2D_Base):
     """The central class in the overal Topological Advection algorithm.
 
     This class represents a triangulation of data points in a 2D
@@ -625,7 +625,7 @@ class triangulation2D(triangulation2D_Base):
         documentation for details on the many options.
 
     TriCopy(EvolutionReset = True)
-        This returns a copy of this triangulation2D object.
+        This returns a copy of this Triangulation2D object.
     """
 
     def __init__(self, ptlist, Domain=None, empty=False):
@@ -735,10 +735,10 @@ class triangulation2D(triangulation2D_Base):
         temptri = Delaunay(temppoints, qhull_options="QJ Pp")
         numsimp = temptri.simplices.shape[0]
         self.simplist = []
-        #  first create the list of simplex2D objects
+        #  first create the list of Simplex2D objects
         #  not linked together yet - need to create every object first
         for i in range(numsimp):
-            self.simplist.append(simplex2D(temptri.simplices[i].tolist()))
+            self.simplist.append(Simplex2D(temptri.simplices[i].tolist()))
             self.simplist[-1].SLindex = i
         #  now create the links
         for i in range(numsimp):
@@ -854,7 +854,7 @@ class triangulation2D(triangulation2D_Base):
 
         Parameters
         ----------
-        simp : simplex2D object
+        simp : Simplex2D object
             The simplex to consider.
 
         Tin : float
@@ -1012,7 +1012,7 @@ class triangulation2D(triangulation2D_Base):
 
         Parameters
         ----------
-        AdjSimps : list of 2 simplex2D objects
+        AdjSimps : list of 2 Simplex2D objects
             These are the two simplices that share the edge to be flipped
 
         EdgeShare : int
@@ -1026,7 +1026,7 @@ class triangulation2D(triangulation2D_Base):
 
         Returns
         -------
-        list of 2 simplex2D objects
+        list of 2 Simplex2D objects
             The two new simplices.  Returned so that the calling function
         """
         Simp, Topsimp = AdjSimps
@@ -1042,8 +1042,8 @@ class triangulation2D(triangulation2D_Base):
         lptuid = (tptuid+1) % 3
         rptuid = (tptuid+2) % 3
         #  create the new simplices
-        rsimp = simplex2D([bpt, rpt, tpt])  # new right simplex
-        lsimp = simplex2D([bpt, tpt, lpt])  # new left simplex
+        rsimp = Simplex2D([bpt, rpt, tpt])  # new right simplex
+        lsimp = Simplex2D([bpt, tpt, lpt])  # new left simplex
         #  create the list of edge ids for the weight operator
         WeightIDs = [EdgeShare, Topsimp.edgeids[lptuid],
                      Topsimp.edgeids[rptuid], Simp.edgeids[rptlid],
@@ -2138,7 +2138,7 @@ class triangulation2D(triangulation2D_Base):
         return patches_out, weights_out, line_weights_out
 
     def TriCopy(self, EvolutionReset=True):
-        """Create a copy of this triangulation2D object.
+        """Create a copy of this Triangulation2D object.
 
         Custom, as a deepcopy is not sufficient.
 
@@ -2151,11 +2151,11 @@ class triangulation2D(triangulation2D_Base):
 
         Returns
         -------
-        triangulation2D object
-            Returns a copy of this triangulation2D object
+        Triangulation2D object
+            Returns a copy of this Triangulation2D object
         """
         #  create an empty triangulation object (to be returned at the end)
-        TriC = triangulation2D([], None, empty=True)
+        TriC = Triangulation2D([], None, empty=True)
         if not EvolutionReset:
             TriC._atstep = self._atstep
         TriC._extranum = self._extranum
@@ -2166,7 +2166,7 @@ class triangulation2D(triangulation2D_Base):
         TriC._pointposfuture = copy.deepcopy(self._pointposfuture)
         TriC._Vec = self._Vec
         for i in range(len(self.simplist)):
-            TriC.simplist.append(simplex2D(self.simplist[i].points))
+            TriC.simplist.append(Simplex2D(self.simplist[i].points))
             TriC.simplist[-1].edgeids = copy.copy(self.simplist[i].edgeids)
             TriC.simplist[-1].SLindex = i
             TriC.simplist[-1].IsBoundarySimp = self.simplist[i].IsBoundarySimp

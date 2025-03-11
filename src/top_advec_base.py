@@ -11,7 +11,7 @@ are accumulated.
 
 Classes
 -------
-simplex2D_Base
+Simplex2D_Base
     Base class representing a triangle / 2D simplex
 
 Loop_Base
@@ -23,7 +23,7 @@ WeightOperator_Base
 PlotParameters:
     Data class for grouping plot parameters
 
-triangulation2D_Base
+Triangulation2D_Base
     Base class representing a triangulation of data points in a 2D domain.
     With methods for evolving the triangulation forward due to moving points,
     intializing loops, evolving loops, and plotting.
@@ -35,8 +35,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
-# simplex2D_Base class #######################################################
-class simplex2D_Base(ABC):
+# Simplex2D_Base class #######################################################
+class Simplex2D_Base(ABC):
     """Class representing a triangle / 2D simplex.
 
         (used in a 2D triangulation object)
@@ -46,11 +46,11 @@ class simplex2D_Base(ABC):
     points : list of 3 ints
         List of the 3 vertex point IDs. These IDs will be used to get
         the vertex spatial locations from a master list that is a
-        triangulation2D attribue. Note that the order is only unique up
+        Triangulation2D attribue. Note that the order is only unique up
         to an even permutation. The permuation given on initialization
         is assumed to correspond to a set of geometric points that are
         given in counter clock-wise, CCW, order. Moving about this list
-        (and other simplex2D attributes) is done via modular
+        (and other Simplex2D attributes) is done via modular
         arithmatic: (i+1)%3 to move CCW about the simplex from index i,
         and (i+2)%3 to move CW.
 
@@ -66,9 +66,9 @@ class simplex2D_Base(ABC):
 
     SLindex : int
         ID of this simplex in a Simplex List attribute of
-        triangulation2D (simplist). This is useful for going back and
-        forth from the local view (simplex2D object) and the global
-        view (triangulation2D object)
+        Triangulation2D (simplist). This is useful for going back and
+        forth from the local view (Simplex2D object) and the global
+        view (Triangulation2D object)
 
     Methods
     -------
@@ -90,7 +90,7 @@ class simplex2D_Base(ABC):
     _count = 0
 
     def __init__(self, IDlist):
-        simplex2D_Base._count += 1
+        Simplex2D_Base._count += 1
         self.points = []
         for i in range(len(IDlist)):
             self.points.append(IDlist[i])
@@ -99,7 +99,7 @@ class simplex2D_Base(ABC):
         self.SLindex = None
 
     def __del__(self):
-        simplex2D_Base._count -= 1
+        Simplex2D_Base._count -= 1
 
     def __eq__(self, other):
         return self is other  # all comparisions by object id, not value.
@@ -138,7 +138,7 @@ class simplex2D_Base(ABC):
     def SimpLink(self, S_other):
         """Links this simplex with S_other (and vice versa)."""
         pass
-# End simplex2D_Base class ###################################################
+# End Simplex2D_Base class ###################################################
 
 
 # Loop Class #################################################################
@@ -146,7 +146,7 @@ class Loop_Base(ABC):
     """Class representing a topological loop or set of loops.
 
     The coordinate system (basis) for this representation is fixed by a
-    particular triangulation2D object.
+    particular Triangulation2D object.
 
     Attributes
     ----------
@@ -232,8 +232,8 @@ class PlotParameters:
 # End PlotParameters Class ##################################################
 
 
-# triangulation2D_Base Class #################################################
-class triangulation2D_Base(ABC):
+# Triangulation2D_Base Class #################################################
+class Triangulation2D_Base(ABC):
     """The central class in the overal Topological Advection algorithm.
 
     This class represents a triangulation of data points in a 2D
@@ -295,7 +295,7 @@ class triangulation2D_Base(ABC):
         data class documentation for details on the many options.
 
     TriCopy(EvolutionReset = True)
-        This returns a copy of this triangulation2D object.
+        This returns a copy of this Triangulation2D object.
     """
 
     def __init__(self, ptlist, empty=False):
@@ -415,7 +415,7 @@ class triangulation2D_Base(ABC):
 
         Parameters
         ----------
-        simp : simplex2D object
+        simp : Simplex2D object
             The simplex to consider.
 
         Tin : float
@@ -484,7 +484,7 @@ class triangulation2D_Base(ABC):
 
         Parameters
         ----------
-        AdjSimps : list of 2 simplex2D objects
+        AdjSimps : list of 2 Simplex2D objects
             These are the two simplices that share the edge to be
             flipped
 
@@ -500,7 +500,7 @@ class triangulation2D_Base(ABC):
 
         Returns
         -------
-        list of 2 simplex2D objects
+        list of 2 Simplex2D objects
             The two new simplices.  Returned so that the calling
             function
         """
@@ -729,7 +729,7 @@ class triangulation2D_Base(ABC):
 
     @abstractmethod
     def TriCopy(self, EvolutionReset=True):
-        """Create a copy of this triangulation2D object.
+        """Create a copy of this Triangulation2D object.
 
         Custom, as a deepcopy is not sufficient.
 
@@ -742,7 +742,7 @@ class triangulation2D_Base(ABC):
 
         Returns
         -------
-        triangulation2D object
-            Returns a copy of this triangulation2D object
+        Triangulation2D object
+            Returns a copy of this Triangulation2D object
         """
         pass

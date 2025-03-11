@@ -1,6 +1,6 @@
 import top_advec_bnd as TA
 import top_advec_pbc as TAp
-import HelperFns as HF
+import helper_fns as HF
 import numpy as np
 import os
 from scipy.optimize import curve_fit
@@ -29,7 +29,7 @@ class TopologicalAdvection:
                                                    PeriodicBC=self.PeriodicBC)
         self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
         #  now initialize a triangulation object
-        self.Tri = self.TA.triangulation2D(self.Tslices[0], self.Domain)
+        self.Tri = self.TA.Triangulation2D(self.Tslices[0], self.Domain)
         if not PeriodicBC:
             ExBnd = HF.GetBoundingDomainSlice(self.Tri.pointpos, frac=0.0)
             dx = (ExBnd[1][0] - ExBnd[0][0])/np.sqrt(len(self.Tri.pointpos))
@@ -48,8 +48,6 @@ class TopologicalAdvection:
         self.TotalWeightOverTime = None
         self.Loop = None
         self.CurveGenerator = CurveGenerator(self.Domain, self.PeriodicBC)
-
-
 
     def EvolveTri(self, Delaunay=False):
         for i in range(1, self.NumTimes):
@@ -140,8 +138,6 @@ class TopologicalAdvection:
                           " represented with shear coordinates")
             else:
                 print("Need to create a loop")
-
-
 
     def MovieFigures(self, PlotLoop=True, Delaunay=True,
                      ImageFolder="MovieImages/", ImageName="EvolvingLoop",
@@ -247,7 +243,7 @@ class CurveGenerator:
             print("Curve is not contained in the domain ", self.Domain)
             return []
         else:
-            delta = 1e-6*(self.Domain[1][0] -  self.Domain[0][0])
+            delta = 1e-6*(self.Domain[1][0] - self.Domain[0][0])
             points = [[self.Domain[0][0] + delta, y_val],
                       [self.Domain[1][0] - delta, y_val]]
             if self.PeriodicBC:
