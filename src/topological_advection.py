@@ -20,9 +20,10 @@ Classes
 TopologicalAdvection
     Main class. Trajectories & times as attributes and main actions as methods
 
-CurveGenerator
-    Built-in options for generating geometric curves (which are used to
-    initialize topological loops in TopologicalAdvection objects)
+CurveSet
+    Set of curves as an attribute, with built-in mothods for generating
+    geometric curves (which are used to initialize topological loops in
+    TopologicalAdvection objects)
 """
 
 import top_advec_bnd
@@ -135,7 +136,7 @@ class TopologicalAdvection:
         this loop that will be evolved forward.  LoopEvolved is a bool which
         indicates whether LoopFinal has been evolved forward yet.
 
-    CurveGenerator : CurveGenerator object
+    CurveSet : CurveSet object
         This object stores representations of geometric curves and has methods
         for generating them.  These geometric curves can then be used to
         initialize a topological loop.
@@ -155,9 +156,72 @@ class TopologicalAdvection:
     GetTopologicalEntropy(frac_start=0.0, ss_indices=None)
         Find the topological entropy of the trajectory set
 
+    ClearCurves()
+        Reset the CurveSet object to have no curves.
+
+    InitializeLoopWithCurves()
+        Initialize a topological loop with the current set of curves.
+
+    EvolveLoop()
+        Evolve the current loop forward to the final time.
+
+    SetPlotParameters(**kwargs)
+        Set any of the PlotParameter attributes.
+
+    ResetPlotParametersDefault()
+        Reset the Plotting Parameters to the default values.
+
+    PrintPlotParameters()
+        Print out the current values of the plotting parameters.
+
+    Plot(PlotLoop=True, Initial=False)
+        Plot the triangulation and/or loop.
+
+    MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder="MovieImages/",
+                 ImageName="EvolvingLoop", filetype=".png")
+        Generate a sequence of plots to be used in creating a movie.
     """
 
-    def __init__(self, TrajectorySlices, Times = None, Domain=None, PeriodicBC=False):
+    def __init__(self, TrajectorySlices, Times=None, Domain=None,
+                 PeriodicBC=False):
+        """Initialize Topological Advection object.
+
+        Parameters
+        ----------
+        TrajectorySlices : list of lists
+            The time-slices which represent the set of point positions over
+            time. The first index indexes the time slice, and len(Tslices) =
+            len(Times).  The second index indexes the particle id (particle
+            ids are implicit, and a given particle will always have its data
+            in the same position in any time slice). So len(Tslices[t]) =
+            number of particles (for any t < len(Times)). The third index
+            indexes the x/y direction choice. So, Tslices[t][p][0] gives the
+            x position of the pth particle at time slice t, while
+            Tslices[t][p][1] gives the y position.
+
+        Times : list of floats
+            The times at which the time slices were taken. These are needed to
+            give quantitative meaning to the Topological Entropy (per unit
+            time). Must have len(Times) = len(Tslices). If no Times list is
+            passed on initialization, a simple list with equal increments of 1
+            is generated. The default is None.
+
+        Domain : list of lists
+            This is the rectangular bounding domain for the trajectories. It
+            has the format [[x_min, y_min], [x_max, y_max]].  In the case of
+            periodic boundary conditions (PeriodicBC is True), x_min and y_min
+            must be 0. If no domain is passed on initialization (the default),
+            one will be generated based on the max and min x/y positions of
+            the particles (not ideal for periodic boundary case). The default
+            is None.
+
+        PeriodicBC : bool
+            Does the data live on a doubly periodic domain/torus (PeriodicBC is
+            True), or does it live on a bounded piece of the plane (PeriodicBC
+            is False - default)? This flag determines which module is used:
+            (top_advec_bnd.py or top_advec_pbc.py). The default is False.
+
+        """
         self.Tslices = TrajectorySlices
         if Times is None:
             self.Times = [i for i in range(len(self.Tslices))]
@@ -199,7 +263,7 @@ class TopologicalAdvection:
         self.TopologicalEntropy = None
         self.TotalWeightOverTime = None
         self.LoopData = None
-        self.CurveGenerator = CurveGenerator(self.Domain, self.PeriodicBC)
+        self.CurveSet = CurveSet(self.Domain, self.PeriodicBC)
 
     def EvolveTri(self, Delaunay=False):
         """Evolve Tri forward to the final time slice.
@@ -277,6 +341,7 @@ class TopologicalAdvection:
         return TE, TE_err, WeightsM
 
     def _GetSlopeFit(self, LWeightsIn, istart, iend):
+        # fit LWeightsIn to a straight line and return slope and fitting error
         def linear_func(x, a, b):
             return a*x+b
         #  fitting to a linear function ax+b
@@ -285,40 +350,111 @@ class TopologicalAdvection:
         perr = np.sqrt(np.diag(pcov))
         return [popt[0], perr[0]]
 
-    def ClearLoop(self):
+    def _ClearLoopData(self):
         self.LoopData = None
 
     def ClearCurves(self):
-        self.CurveGenerator.ClearCurves()
+        """Reset the CurveSet object to have no curves."""
+        self.CurveSet.ClearCurves()
 
     def InitializeLoopWithCurves(self):
-        if len(self.CurveGenerator.Curves) > 0:
+        """Initialize a topological loop with the current set of curves."""
+        self._ClearLoopData()
+        if len(self.CurveSet.Curves) > 0:
             loop = self.TA.Loop(self.TriInit,
-                                curves=self.CurveGenerator.Curves)
+                                curves=self.CurveSet.Curves)
             self.LoopData = _LoopData(topadvec_in=self, LoopInitial=loop)
 
     def EvolveLoop(self):
+        """Evolve the current loop forward to the final time.
+
+        This takes LoopData.LoopFinal (the final loop object in the LoopData
+        attribute) and evolves it forward to the final time slice using the
+        accumulated WeightOperators in Tri (if it has not already been evolved
+        forward).  Before this, Tri is evolved forward if not already done.
+
+
+        Returns
+        -------
+        None.
+
+        """
         if not self.TriEvolved:
             self.EvolveTri()
         if not self.LoopData.LoopEvolved:
             self.Tri.OperatorAction(self.LoopData.LoopFinal, option=1)
             self.LoopData.LoopEvolved = True
 
-    def SetPlotParameters(self,**kwargs):
+    def SetPlotParameters(self, **kwargs):
+        """Set any of the PlotParameter attributes.
+
+        Use the key, value pair to specify the parameters which determine what
+        to plot and how it should look.  As an example, if you want to change
+        the point markersize to 3, not plot the triangulation, and set the
+        train-tracks color to green, then use:
+        SetPlotParameters(markersize = 3, triplot = True, linecolor_tt = 'g')
+        The parameter values persist until explicitly changed or reset to the
+        default values.  See PlotParameters documentation for all the options.
+
+        Parameters
+        ----------
+        **kwargs :
+            key, value pairs
+
+        Returns
+        -------
+        None.
+
+        """
         for key, value in kwargs.items():
             setattr(self.PlotParameters, key, value)
 
     def ResetPlotParametersDefault(self):
+        """Reset the Plotting Parameters to the default values.
+
+        Returns
+        -------
+        None.
+
+        """
         self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
 
     def PrintPlotParameters(self):
+        """Print out the current values of the plotting parameters.
+
+        Returns
+        -------
+        None.
+
+        """
         for key, value in asdict(self.PlotParameters).items():
             if not (key == "conversion_factor" or key == "max_weight"):
                 print(f"{key}: {value}")
 
-    #  to change plotting parameters, before using this function, set the
-    #  prameters in the PlotParameters attribute (a data object)
     def Plot(self, PlotLoop=True, Initial=False):
+        """Plot the triangulation and/or loop.
+
+        Before calling this method, set the desired plotting parameters using
+        SetPlotParameters method.  This call
+
+        Parameters
+        ----------
+        PlotLoop : bool
+            Flag - If True, the loop stored in LoopData is plotted, if
+            False, the loop is not plotted. The default is True.
+
+        Initial : bool
+            Flag - If True, the initial state is plotted (initial
+            triangulation in TriInit, and initial loop in LoopData.LoopInitial)
+            If False (default), the final state is plotted (final triangulation
+            is Tri, and final loop in LoopData.LoopFinal).  The triangulation
+            and/or Loop will be evolved forward if needed.
+
+        Returns
+        -------
+        None.
+
+        """
         setattr(self.PlotParameters, "Delaunay", self.IsDelaunay)
         if not PlotLoop:
             if Initial:
@@ -344,12 +480,51 @@ class TopologicalAdvection:
     def MovieFigures(self, PlotLoop=True, Delaunay=True,
                      ImageFolder="MovieImages/", ImageName="EvolvingLoop",
                      filetype=".png"):
+        """Generate a sequence of plots to be used in creating a movie.
+
+        This creates one figure for each of the time slices (sequentially
+        named). Use PlotParameters to set the plotting attributes before
+        calling this method. A folder is automatically created (if it doesn't
+        already exist) in the current directory to store the figures. One can
+        then use ffmpeg (or your favorite video editing software) to create a
+        movie from the images. An example ffmpeg command to do this:
+        ffmpeg -r 24 -pattern_type glob -i '*.png'  -vcodec libx264 -crf 25
+        -pix_fmt yuv420p AdvectingLoop.mp4
+
+        Parameters
+        ----------
+        PlotLoop : bool
+            Flag - If True (default), the loop is plotted. If False, the loop
+            is not included in the plot.
+
+        Delaunay : bool
+            Flag - If True (default), the triangulation is forced to be
+            Delaunay after each evolution step. If False, only collapse events
+            are used for the triangulation evolution.
+
+        ImageFolder : str
+            Name of the folder to put the images in.
+            The default is "MovieImages/".
+
+        ImageName : str
+            The start of the image file names. The default is "EvolvingLoop".
+            The sequence of image files will be destinguished with a trailing
+            integer converted to str.  Ex.: EvolvingLoop0042.png
+
+        filetype : str
+            The type of file to save the image as. The default is ".png".
+
+        Returns
+        -------
+        None.
+
+        """
+        if not os.path.exists(ImageFolder):
+            os.makedirs(ImageFolder)
         setattr(self.PlotParameters, "Delaunay", Delaunay)
         if self.LoopData is not None and PlotLoop:
             self._ResetTri()
             loop = self.LoopData.LoopInitial.LoopCopy()
-            if not os.path.exists(ImageFolder):
-                os.makedirs(ImageFolder)
             fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
             setattr(self.PlotParameters, "filename", fname)
             self.Tri.Plot(LoopIn=loop, PP=self.PlotParameters)
@@ -371,8 +546,6 @@ class TopologicalAdvection:
             print("Need to create an initial loop first")
         else:
             self._ResetTri()
-            if not os.path.exists(ImageFolder):
-                os.makedirs(ImageFolder)
             fname = ImageFolder + ImageName + HF.CounterToStr(0) + filetype
             setattr(self.PlotParameters, "filename", fname)
             self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
@@ -394,7 +567,68 @@ class _LoopData:
         self.LoopFinal: topadvec_in.TA.Loop = LoopInitial.LoopCopy()
         self.LoopEvolved: bool = False
 
-class CurveGenerator:
+
+class CurveSet:
+    """Generate and store a set of geometric curves.
+
+    Geometric curves are used to initialize topological loops in
+    TopologicalAdvection objects.
+
+    Attributes
+    ----------
+    Domain : list of lists
+        This is the rectangular bounding domain for the trajectories.  It has
+        the format [[x_min, y_min], [x_max, y_max]].
+
+    PeriodicBC : bool
+        Does the data live on a doubly periodic domain/torus (PeriodicBC is
+        True), or does it live on a bounded piece of the plane (PeriodicBC is
+        False)?
+
+    curves : list
+        Each element in the list represents a curve, and consists of four
+        items: the list of point positions [[x_0,y_0],[x_1,y_1],...],
+        whether the curve is closed (bool), whether the end points are
+        pinned [bool,bool], and finally, the weight to add to the loop
+        weightlist.
+
+    Methods
+    -------
+    ClearCurves()
+        Reset the curves to be an empty list.
+
+    AddCircle(center, radius, NumPoints=100)
+        Add a circle to the curves list.
+
+    AddEllipse(center, a, b, phi=0, NumPoints=100)
+        Add an ellipse to the curves list.
+
+    AddRectangle(center, w, h, phi=0)
+        Add a rectangle to the curves list.
+
+    AddSquare(center, L, phi=0)
+        Add a square to the curves list.
+
+    AddVerticalLine(x_val)
+        Add a vertical line to the curves list.
+
+    AddHorizontalLine(y_val)
+        Add a horizontal line to the curves list.
+
+    AddLineSegment(pt1, pt2)
+        Add a line segment to the curves list.
+
+    AddOpenCurve(points)
+        Add a custom curve with open ends to the curves list.
+
+    AddClosedCurve(points)
+        Add a custom closed curve to the curves list.
+
+    Note
+    ----
+    All the points in a generated curve must be inside the domain. If not,
+    then the curve is not added to the curve list.
+    """
 
     def __init__(self, Domain, PeriodicBC):
         self.Domain = Domain
@@ -402,12 +636,42 @@ class CurveGenerator:
         self.Curves = []
 
     def ClearCurves(self):
+        """Reset the curves to be an empty list."""
         self.Curves = []
 
     def AddCircle(self, center, radius, NumPoints=100):
+        """Add a circle to the curves list.
+
+        Parameters
+        ----------
+        center : list of 2 floats
+            The [x,y] location of the center of the circle
+        radius : float
+            Circle radius.
+        NumPoints : int
+            The number of points to use in approximating the curve.
+            The default is 100.
+        """
         self.AddEllipse(center, radius, radius, NumPoints=NumPoints)
 
     def AddEllipse(self, center, a, b, phi=0, NumPoints=100):
+        """Add an ellipse to the curves list.
+
+        Parameters
+        ----------
+        center : list of 2 floats
+            The [x,y] location of the center of the ellipse.
+        a : float
+            Semi-major axis
+        b : float
+            Semi-minor axis
+        phi : float
+            Angle (in radians) that the semi-major axis makes with the
+            horizontal. The default is 0.
+        NumPoints : int
+            The number of points to use in approximating the curve.
+            The default is 100.
+        """
         theta = np.linspace(0, 2*np.pi, num=NumPoints, endpoint=False)
         points = np.array([center[0] + a*np.cos(theta)*np.cos(phi)
                            - b*np.sin(theta)*np.sin(phi),
@@ -416,6 +680,20 @@ class CurveGenerator:
         self.AddClosedCurve(points)
 
     def AddRectangle(self, center, w, h, phi=0):
+        """Add a rectangle to the curves list.
+
+        Parameters
+        ----------
+        center : list of 2 floats
+            The [x,y] location of the center of the rectangle.
+        w : float
+            Width
+        h : float
+            Height
+        phi : float
+            Angle (in radians) that the rectangle width axis makes with the
+            horizontal. The default is 0.
+        """
         points = np.array([[-w/2, -h/2], [w/2, -h/2], [w/2, h/2], [-w/2, h/2]])
         points = np.array([center[0] + points[:, 0]*np.cos(phi)
                            - points[:, 1]*np.sin(phi),
@@ -424,12 +702,36 @@ class CurveGenerator:
         self.AddClosedCurve(points)
 
     def AddSquare(self, center, L, phi=0):
+        """Add a square to the curves list.
+
+        Parameters
+        ----------
+        center : list of 2 floats
+            The [x,y] location of the center of the square.
+        L : float
+            Side length
+        phi : float
+            Angle (in radians) that the square is rotated by.
+        """
         self.AddRectangle(center, L, L, phi)
 
     def AddVerticalLine(self, x_val):
+        """Add a vertical line to the curves list.
+
+        Parameters
+        ----------
+        x_val : float
+            The x position of the vertical line.
+
+        Note
+        ----
+        If the domain is periodic, this is a closed curve about one of the
+        torus fundamental directions.  If not, the topological loop generated
+        from this geometric curve will have ends that wrap around the
+        nearest boundary control points.
+        """
         if x_val < self.Domain[0][0] or x_val > self.Domain[1][0]:
             print("Curve is not contained in the domain ", self.Domain)
-            return []
         else:
             delta = 1e-6*(self.Domain[1][1] - self.Domain[0][1])
             points = [[x_val, self.Domain[0][1] + delta],
@@ -440,9 +742,22 @@ class CurveGenerator:
                 self.Curves.append([points, False, [True, True], 0.5])
 
     def AddHorizontalLine(self, y_val):
+        """Add a horizontal line to the curves list.
+
+        Parameters
+        ----------
+        y_val : float
+            The y position of the horizontal line.
+
+        Note
+        ----
+        If the domain is periodic, this is a closed curve about one of the
+        torus fundamental directions.  If not, the topological loop generated
+        from this geometric curve will have ends that wrap around the
+        nearest boundary control points.
+        """
         if y_val < self.Domain[0][1] or y_val > self.Domain[1][1]:
             print("Curve is not contained in the domain ", self.Domain)
-            return []
         else:
             delta = 1e-6*(self.Domain[1][0] - self.Domain[0][0])
             points = [[self.Domain[0][0] + delta, y_val],
@@ -453,23 +768,65 @@ class CurveGenerator:
                 self.Curves.append([points, False, [True, True], 0.5])
 
     def AddLineSegment(self, pt1, pt2):
+        """Add a line segment going from pt1 to pt2 to the curves list.
+
+        Parameters
+        ----------
+        pt1 : list of 2 floats
+            End position, [x,y], of the line segment.
+        pt2 : list of 2 floats
+            Other end position, [x,y], of the line segment.
+
+        Note
+        ----
+        The topological loop initialized with this geometric line segment will
+        wrap around the nearest point to each end of the segment.
+        """
         points = [pt1, pt2]
         self.AddOpenCurve(points)
 
     def AddOpenCurve(self, points):
-        if not self.ContainedInDomain(np.array(points)):
+        """Add a custom curve with open ends to the curves list.
+
+        Parameters
+        ----------
+        points : list of lists
+            List of sequential points ([x_1, y_1], [x_2, y_2], ...) defining
+            a curve.
+
+        Note
+        ----
+        This is an 'open' curve, meaning the last and first points are not
+        meant to be connected. The topological loop initialized with this
+        geometric curve will wrap around the nearest trajectory points to each
+        end of the curve.
+        """
+        if not self._ContainedInDomain(np.array(points)):
             print("Curve is not contained in the domain ", self.Domain)
         else:
             self.Curves.append([points, False, [True, True], 0.5])
 
     def AddClosedCurve(self, points):
-        if not self.ContainedInDomain(np.array(points)):
+        """Add a custom closed curve to the curves list.
+
+        Parameters
+        ----------
+        points : list of lists
+            List of sequential points ([x_1, y_1], [x_2, y_2], ...) defining
+            a curve. Any cyclic shift of this list is equivalent.
+
+        Note
+        ----
+        This is a 'closed' curve, meaning the last and first points are
+        connected.
+        """
+        if not self._ContainedInDomain(np.array(points)):
             print("Curve is not contained in the domain ", self.Domain)
         else:
             self.Curves.append([points, True, [False, False], 1.0])
             #  point_set, is_closed, end_pts_pin, wadd
 
-    def ContainedInDomain(self, points):
+    def _ContainedInDomain(self, points):
         x_max = np.max(points[:, 0])
         x_min = np.min(points[:, 0])
         y_max = np.max(points[:, 1])
