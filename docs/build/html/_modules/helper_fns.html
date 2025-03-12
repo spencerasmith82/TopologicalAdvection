@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>helper_fns &mdash; TopologicalAdvection  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            TopologicalAdvection
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">TopologicalAdvection</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">helper_fns</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for helper_fns</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module for all of the stand-alone helper functions.</span>
+
+<span class="sd">None of these functions rely on any of the topological advection classes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">matplotlib.path</span> <span class="k">as</span> <span class="nn">mpath</span>
+<span class="kn">import</span> <span class="nn">matplotlib.patches</span> <span class="k">as</span> <span class="nn">mpatches</span>
+<span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">jit</span>
+
+
+<div class="viewcode-block" id="progressBar">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.progressBar">[docs]</a>
+<span class="k">def</span> <span class="nf">progressBar</span><span class="p">(</span><span class="n">count_value</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Progress bar for tracking the progress of triangulation evolution.&quot;&quot;&quot;</span>
+    <span class="n">bar_length</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">filled_up_Length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">bar_length</span> <span class="o">*</span> <span class="n">count_value</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">)))</span>
+    <span class="n">percentage</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="mf">100.0</span> <span class="o">*</span> <span class="n">count_value</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">total</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">bar</span> <span class="o">=</span> <span class="s1">&#39;=&#39;</span> <span class="o">*</span> <span class="n">filled_up_Length</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="n">bar_length</span> <span class="o">-</span> <span class="n">filled_up_Length</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">%s</span><span class="s1">] </span><span class="si">%s%s</span><span class="s1"> ...</span><span class="si">%s</span><span class="se">\r</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">bar</span><span class="p">,</span> <span class="n">percentage</span><span class="p">,</span> <span class="s1">&#39;%&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="GetMinMaxXYTrajVals">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetMinMaxXYTrajVals">[docs]</a>
+<span class="k">def</span> <span class="nf">GetMinMaxXYTrajVals</span><span class="p">(</span><span class="n">Tslices</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the minimum and maximum x &amp; y values in a trajectory set.&quot;&quot;&quot;</span>
+    <span class="n">TS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Tslices</span><span class="p">)</span>
+    <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">TS</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">x_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">TS</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">y_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">TS</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">y_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">TS</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">[[</span><span class="n">x_min</span><span class="p">,</span> <span class="n">y_min</span><span class="p">],</span> <span class="p">[</span><span class="n">x_max</span><span class="p">,</span> <span class="n">y_max</span><span class="p">]]</span></div>
+
+
+
+<div class="viewcode-block" id="GetBoundingDomainSlice">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetBoundingDomainSlice">[docs]</a>
+<span class="k">def</span> <span class="nf">GetBoundingDomainSlice</span><span class="p">(</span><span class="n">ptlist</span><span class="p">,</span> <span class="n">frac</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the bounding domain of a time slice.</span>
+
+<span class="sd">    With the option to add some padding with frac.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ptlist_temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ptlist</span><span class="p">)</span>
+    <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ptlist_temp</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">x_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ptlist_temp</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">y_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ptlist_temp</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">y_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ptlist_temp</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="n">x_max</span> <span class="o">-</span> <span class="n">x_min</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="n">y_max</span> <span class="o">-</span> <span class="n">y_min</span>
+    <span class="n">x_pad</span> <span class="o">=</span> <span class="n">dx</span><span class="o">*</span><span class="n">frac</span>
+    <span class="n">y_pad</span> <span class="o">=</span> <span class="n">dy</span><span class="o">*</span><span class="n">frac</span>
+    <span class="k">return</span> <span class="p">[[</span><span class="n">x_min</span> <span class="o">-</span> <span class="n">x_pad</span><span class="p">,</span> <span class="n">y_min</span> <span class="o">-</span> <span class="n">y_pad</span><span class="p">],</span> <span class="p">[</span><span class="n">x_max</span> <span class="o">+</span> <span class="n">x_pad</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">+</span> <span class="n">y_pad</span><span class="p">]]</span></div>
+
+
+
+<div class="viewcode-block" id="GetBoundingDomainTraj">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetBoundingDomainTraj">[docs]</a>
+<span class="k">def</span> <span class="nf">GetBoundingDomainTraj</span><span class="p">(</span><span class="n">Tslices</span><span class="p">,</span> <span class="n">PeriodicBC</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">frac</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the bounding domain of a trajectory set.&quot;&quot;&quot;</span>
+    <span class="n">BD</span> <span class="o">=</span> <span class="n">GetMinMaxXYTrajVals</span><span class="p">(</span><span class="n">Tslices</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">PeriodicBC</span><span class="p">:</span>
+        <span class="n">BD</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">BD</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x_pad</span><span class="p">,</span> <span class="n">y_pad</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="n">Deltax</span> <span class="o">=</span> <span class="n">BD</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">BD</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Deltay</span> <span class="o">=</span> <span class="n">BD</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">BD</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">frac</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">npts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Tslices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">a_ratio</span> <span class="o">=</span> <span class="n">Deltax</span><span class="o">/</span><span class="n">Deltay</span>
+            <span class="n">npts_x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">npts</span><span class="o">*</span><span class="n">a_ratio</span><span class="p">))</span>
+            <span class="n">npts_y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="o">/</span><span class="n">npts_x</span><span class="p">)</span>
+            <span class="n">x_pad</span> <span class="o">=</span> <span class="n">Deltax</span><span class="o">/</span><span class="p">(</span><span class="n">npts_x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">y_pad</span> <span class="o">=</span> <span class="n">Deltay</span><span class="o">/</span><span class="p">(</span><span class="n">npts_y</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x_pad</span> <span class="o">=</span> <span class="n">Deltax</span><span class="o">*</span><span class="n">frac</span>
+            <span class="n">y_pad</span> <span class="o">=</span> <span class="n">Deltay</span><span class="o">*</span><span class="n">frac</span>
+        <span class="n">BD</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">x_pad</span>
+        <span class="n">BD</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">x_pad</span>
+        <span class="n">BD</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">y_pad</span>
+        <span class="n">BD</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">y_pad</span>
+        <span class="k">return</span> <span class="n">BD</span></div>
+
+
+
+<div class="viewcode-block" id="CounterToStr">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.CounterToStr">[docs]</a>
+<span class="k">def</span> <span class="nf">CounterToStr</span><span class="p">(</span><span class="n">countin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a str version of the input int (with consistent padding).&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">countin</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;000&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">countin</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">countin</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;00&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">countin</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">countin</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;0&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">countin</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">countin</span> <span class="o">&lt;</span> <span class="mi">10000</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">countin</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;countertoobig&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="BinarySearch">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BinarySearch">[docs]</a>
+<span class="k">def</span> <span class="nf">BinarySearch</span><span class="p">(</span><span class="n">ListIn</span><span class="p">,</span> <span class="n">TimeIn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Binary search on a sorted list.</span>
+
+<span class="sd">    BinarySearch does a binary search on a given sorted list (each element is</span>
+<span class="sd">    a list of length 2, were the second item is the ordering parameter).  The</span>
+<span class="sd">    list is assumed to be in decending order (smallest last).  The item that</span>
+<span class="sd">    is searched for is a single number  - TimeIn (time to zero area).  The</span>
+<span class="sd">    search is over the time variable.  The index i of ListIn such that</span>
+<span class="sd">    ListIn[i][1] &gt; TimeIn and ListIn[i+1][1] &lt;= TimeIn is returned.  It is</span>
+<span class="sd">    assumed that the case of TimeIn &gt; ListIn[0][1] and TimeIn &lt; ListIn[-1][1]</span>
+<span class="sd">    have already been filtered out and delt with</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Lindex</span><span class="p">,</span> <span class="n">Rindex</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ListIn</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>  <span class="c1"># starting left and right indices</span>
+    <span class="k">while</span> <span class="n">Rindex</span> <span class="o">-</span> <span class="n">Lindex</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># middle index, see if our item is in the left or right interval</span>
+        <span class="n">Mindex</span> <span class="o">=</span> <span class="p">(</span><span class="n">Rindex</span><span class="o">+</span><span class="n">Lindex</span><span class="p">)</span><span class="o">//</span><span class="mi">2</span>
+        <span class="k">if</span> <span class="n">TimeIn</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">Mindex</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">Lindex</span> <span class="o">=</span> <span class="n">Mindex</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Rindex</span> <span class="o">=</span> <span class="n">Mindex</span>
+    <span class="k">return</span> <span class="n">Lindex</span><span class="p">,</span> <span class="n">Rindex</span></div>
+
+
+
+<div class="viewcode-block" id="BinarySearchDel">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BinarySearchDel">[docs]</a>
+<span class="k">def</span> <span class="nf">BinarySearchDel</span><span class="p">(</span><span class="n">ListIn</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Binary Search Delete.</span>
+
+<span class="sd">    BinarySearchDel does a binary search on a given sorted list (each element</span>
+<span class="sd">    is a list of length 2, were the second item is the ordering parameter).</span>
+<span class="sd">    The list is assumed to be in decending order (smallest last).  The item</span>
+<span class="sd">    that is searched for is also a double [event,time to zero area].  The</span>
+<span class="sd">    search is over the time variable, but the event variable is used for</span>
+<span class="sd">    direct comparison. If a match is found, then it is deleted from the list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-8</span>  <span class="c1"># defining window of uncertainty for the time</span>
+    <span class="n">Left_Time</span> <span class="o">=</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">delta</span>
+    <span class="n">Right_Time</span> <span class="o">=</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">delta</span>
+    <span class="n">matchindex</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">Left_Time</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">Right_Time</span> <span class="o">&gt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">BinarySearch</span><span class="p">(</span><span class="n">ListIn</span><span class="p">,</span> <span class="n">Left_Time</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="n">Right_Time</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">matchindex</span> <span class="o">=</span> <span class="n">k</span>
+                <span class="k">break</span>
+            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">Left_Time</span> <span class="o">&gt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">Right_Time</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">Right_Time</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">matchindex</span> <span class="o">=</span> <span class="n">k</span>
+                <span class="k">break</span>
+            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">Left_Time</span> <span class="o">&gt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">Right_Time</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">while</span> <span class="n">Left_Time</span> <span class="o">&gt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">matchindex</span> <span class="o">=</span> <span class="n">k</span>
+                <span class="k">break</span>
+            <span class="n">k</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">matchindex</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;did not delete item from EventList, event was not found&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Item In = &quot;</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="BinarySearchIns">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BinarySearchIns">[docs]</a>
+<span class="k">def</span> <span class="nf">BinarySearchIns</span><span class="p">(</span><span class="n">ListIn</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Binary Search Insert.</span>
+
+<span class="sd">    BinarySearchIns does a binary search on a given sorted list (each element</span>
+<span class="sd">    is a double, were the second item is the ordering parameter).  The list is</span>
+<span class="sd">    assumed to be in decending order (smallest last).  The item that is</span>
+<span class="sd">    searched for is also a double [event,time to zero area].  The binary</span>
+<span class="sd">    search finds the adjacent pair of elements inbetween which the input</span>
+<span class="sd">    item&#39;s time fits.  If such a pair is found, then the ItemIn is inserted</span>
+<span class="sd">    into this position.  Edge Case: If there is an item (or items) with the</span>
+<span class="sd">    same time as the input item, the the input item is inserted to the left</span>
+<span class="sd">    (lower index) of the item(s).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ListIn</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># empty list, just add the item</span>
+        <span class="n">ListIn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ItemIn</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">ListIn</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># item has smallest time, add to end</span>
+        <span class="n">ListIn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ItemIn</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">ListIn</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># item has largest time, add to front</span>
+        <span class="n">ListIn</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Lindex</span><span class="p">,</span> <span class="n">Rindex</span> <span class="o">=</span> <span class="n">BinarySearch</span><span class="p">(</span><span class="n">ListIn</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># found an adjacent pair of items between which we can</span>
+        <span class="c1"># insert the input item</span>
+        <span class="k">if</span> <span class="n">Rindex</span> <span class="o">-</span> <span class="n">Lindex</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">ListIn</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">Rindex</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># right and left indices are concurrent. This can happen when</span>
+            <span class="c1"># ItemIn has an identical time to one of the items in ListIn.</span>
+            <span class="c1"># These are either the same object (in which case we don&#39;t insert),</span>
+            <span class="c1"># or not.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ItemIn</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ListIn</span><span class="p">[</span><span class="n">Rindex</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="c1"># there can be two different simplices with exactly the same</span>
+                <span class="c1"># time (degenerate triangles spanning the domain), this</span>
+                <span class="c1"># compares the two simplices and adds them if they are</span>
+                <span class="c1"># different</span>
+                <span class="n">ListIn</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">Rindex</span><span class="p">,</span> <span class="n">ItemIn</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Reduce_List">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.Reduce_List">[docs]</a>
+<span class="k">def</span> <span class="nf">Reduce_List</span><span class="p">(</span><span class="n">List_In</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove adjacent repeats in the list.</span>
+
+<span class="sd">    Reduce_List takes a simple list of indices and removes any adjacent</span>
+<span class="sd">    repeats (recursively, and with wrap-around boundary conditions for the</span>
+<span class="sd">    list).  This is used to tighten up a list of edges crossed by a closed</span>
+<span class="sd">    curve.  If the curve crosses an edge twice without any other crossings</span>
+<span class="sd">    inbetween then the curve can slide across this edge (thus removing two</span>
+<span class="sd">    recorded crossings)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">again</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">List_In</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">List_In</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">List_In</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">List_In</span><span class="p">)]:</span>
+            <span class="n">max_ind</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">List_In</span><span class="p">))</span>
+            <span class="n">min_ind</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">List_In</span><span class="p">))</span>
+            <span class="k">del</span> <span class="n">List_In</span><span class="p">[</span><span class="n">max_ind</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">List_In</span><span class="p">[</span><span class="n">min_ind</span><span class="p">]</span>
+            <span class="n">again</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">again</span><span class="p">:</span>
+        <span class="n">Reduce_List</span><span class="p">(</span><span class="n">List_In</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="IsIntersection">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsIntersection">[docs]</a>
+<span class="k">def</span> <span class="nf">IsIntersection</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">,</span> <span class="n">timeinfo</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Do the two line segments intersect eachother.</span>
+
+<span class="sd">    IsIntersection takes in two lines (each defined by two points) and outputs</span>
+<span class="sd">    True if they intersect (between each of their point pairs). If the flag</span>
+<span class="sd">    for time info is True, then we also output the time t1.  So Line 1 is one</span>
+<span class="sd">    whose parameterized intersection time is returned.  The time is the</span>
+<span class="sd">    fraction of the line from Line1[0] to Line1[1]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">D1x</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># line 1 difference in x endpoints</span>
+    <span class="n">D1y</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># same for y</span>
+    <span class="n">D2x</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># line 2 difference in x endpoints</span>
+    <span class="n">D2y</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># same for y</span>
+    <span class="c1"># determinant.  If == 0, then the lines are parallel,</span>
+    <span class="c1"># and there is no intersection to find</span>
+    <span class="n">det</span> <span class="o">=</span> <span class="n">D2y</span><span class="o">*</span><span class="n">D1x</span> <span class="o">-</span> <span class="n">D1y</span><span class="o">*</span><span class="n">D2x</span>
+    <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">det</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># lines intersect</span>
+        <span class="n">bx</span> <span class="o">=</span> <span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">by</span> <span class="o">=</span> <span class="p">(</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">xout</span> <span class="o">=</span> <span class="p">(</span><span class="n">bx</span><span class="o">*</span><span class="n">D2x</span> <span class="o">-</span> <span class="n">by</span><span class="o">*</span><span class="n">D1x</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+        <span class="n">yout</span> <span class="o">=</span> <span class="p">(</span><span class="n">bx</span><span class="o">*</span><span class="n">D2y</span> <span class="o">-</span> <span class="n">by</span><span class="o">*</span><span class="n">D1y</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+        <span class="c1"># find intersection time for line 1 (t1)</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">D1x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">D1y</span><span class="p">):</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="p">(</span><span class="n">xout</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">D1x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="p">(</span><span class="n">yout</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">D1y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">t1</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="c1"># The intersection is between the endpoints of line 1,</span>
+            <span class="c1"># so look for intersection time for line 2 (t2)</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">D2x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">D2y</span><span class="p">):</span>
+                <span class="n">t2</span> <span class="o">=</span> <span class="p">(</span><span class="n">xout</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">D2x</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">t2</span> <span class="o">=</span> <span class="p">(</span><span class="n">yout</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">D2y</span><span class="p">)</span>
+            <span class="c1"># check if itersection is also between endpoints of line 2.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">t2</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">t2</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">timeinfo</span><span class="p">:</span>
+        <span class="c1"># return whether there is a good intersection, and the time</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">IsInt</span><span class="p">,</span> <span class="n">t1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">IsInt</span>  <span class="c1"># return just whether there is a good intersection</span></div>
+
+
+
+<div class="viewcode-block" id="AreaZeroTimeBaseSingle">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.AreaZeroTimeBaseSingle">[docs]</a>
+<span class="k">def</span> <span class="nf">AreaZeroTimeBaseSingle</span><span class="p">(</span><span class="n">aix</span><span class="p">,</span> <span class="n">aiy</span><span class="p">,</span> <span class="n">bix</span><span class="p">,</span> <span class="n">biy</span><span class="p">,</span> <span class="n">cix</span><span class="p">,</span> <span class="n">ciy</span><span class="p">,</span> <span class="n">afx</span><span class="p">,</span> <span class="n">afy</span><span class="p">,</span>
+                           <span class="n">bfx</span><span class="p">,</span> <span class="n">bfy</span><span class="p">,</span> <span class="n">cfx</span><span class="p">,</span> <span class="n">cfy</span><span class="p">,</span> <span class="n">Tin</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Time of collapse for a simplex.</span>
+
+<span class="sd">    AreaZeroTimeBaseSingle outputs a list of two items: the time that the</span>
+<span class="sd">    simplex crosses zero signed area (collapsed), and a boolean indicating</span>
+<span class="sd">    whether this time was &quot;good&quot; - i.e. inbetween Tin and 1.  In the case</span>
+<span class="sd">    of two times that are good, this returns the smaller one.</span>
+<span class="sd">    The input values are the x and y positions of the three points bounding</span>
+<span class="sd">    the simplex (both initial and final), and Tin.</span>
+<span class="sd">    This solves a quadratic in the time variable.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Some intermediate variables to help cut down the number of</span>
+    <span class="c1"># algebraic operations needed</span>
+    <span class="n">caix</span> <span class="o">=</span> <span class="n">cix</span><span class="o">-</span><span class="n">aix</span>
+    <span class="n">caiy</span> <span class="o">=</span> <span class="n">ciy</span><span class="o">-</span><span class="n">aiy</span>
+    <span class="n">baix</span> <span class="o">=</span> <span class="n">bix</span><span class="o">-</span><span class="n">aix</span>
+    <span class="n">baiy</span> <span class="o">=</span> <span class="n">biy</span><span class="o">-</span><span class="n">aiy</span>
+    <span class="n">cafix</span> <span class="o">=</span> <span class="n">cfx</span><span class="o">-</span><span class="n">afx</span><span class="o">-</span><span class="n">caix</span>
+    <span class="n">cafiy</span> <span class="o">=</span> <span class="n">cfy</span><span class="o">-</span><span class="n">afy</span><span class="o">-</span><span class="n">caiy</span>
+    <span class="n">bafix</span> <span class="o">=</span> <span class="n">bfx</span><span class="o">-</span><span class="n">afx</span><span class="o">-</span><span class="n">baix</span>
+    <span class="n">bafiy</span> <span class="o">=</span> <span class="n">bfy</span><span class="o">-</span><span class="n">afy</span><span class="o">-</span><span class="n">baiy</span>
+    <span class="c1"># these are the three coefficients for the quadratic equation:</span>
+    <span class="c1"># a*t**2 + b*t + c</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cafix</span><span class="o">*</span><span class="n">bafiy</span> <span class="o">-</span> <span class="n">cafiy</span><span class="o">*</span><span class="n">bafix</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">caix</span><span class="o">*</span><span class="n">bafiy</span> <span class="o">-</span> <span class="n">caiy</span><span class="o">*</span><span class="n">bafix</span> <span class="o">+</span> <span class="n">cafix</span><span class="o">*</span><span class="n">baiy</span> <span class="o">-</span> <span class="n">cafiy</span><span class="o">*</span><span class="n">baix</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">caix</span><span class="o">*</span><span class="n">baiy</span> <span class="o">-</span> <span class="n">caiy</span><span class="o">*</span><span class="n">baix</span>
+    <span class="c1"># this analytically solves for the smallest real root of the</span>
+    <span class="c1"># quadratic equation that is between Tin and 1</span>
+    <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="o">-</span><span class="n">c</span><span class="o">/</span><span class="n">b</span>
+            <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">Tin</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="o">-</span><span class="n">c</span><span class="o">/</span><span class="n">b</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">b</span><span class="o">*</span><span class="n">b</span> <span class="o">-</span> <span class="mi">4</span><span class="o">*</span><span class="n">a</span><span class="o">*</span><span class="n">c</span>  <span class="c1"># discriminant of the quadratic solution</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># for a != 0 and non-negative discriminant there are</span>
+            <span class="c1"># two real roots (possibly degenerate).</span>
+            <span class="c1"># the largest magnitude root to help with numerical stability</span>
+            <span class="c1"># (no catastrophic cancellation)</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">b</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">copysign</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">q</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">a</span><span class="p">)</span>
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">c</span><span class="o">/</span><span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">t1</span><span class="p">)</span>  <span class="c1"># the other root using t1*t2 = c/a</span>
+            <span class="n">t1ok</span><span class="p">,</span> <span class="n">t2ok</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span>
+            <span class="c1"># checking to see if either of the roots is &quot;good&quot;, i.e.</span>
+            <span class="c1"># between the bounds Tin and 1.</span>
+            <span class="k">if</span> <span class="n">t1</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">t1</span> <span class="o">&gt;</span> <span class="n">Tin</span><span class="p">:</span>
+                <span class="n">t1ok</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">t2</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">t2</span> <span class="o">&gt;</span> <span class="n">Tin</span><span class="p">:</span>
+                <span class="n">t2ok</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># different outputs based on whether the roots are good</span>
+            <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">t1ok</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">t2ok</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>  <span class="c1"># both times are not in the interval</span>
+            <span class="k">elif</span> <span class="n">t1ok</span> <span class="ow">and</span> <span class="n">t2ok</span><span class="p">:</span>
+                <span class="c1"># both times are in the interval, returning smallest time.</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">)]</span>
+            <span class="k">elif</span> <span class="n">t1ok</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="n">t1</span><span class="p">]</span>  <span class="c1"># only t1 is in the interval</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="n">t2</span><span class="p">]</span>  <span class="c1"># only t2 is in the interval</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>  <span class="c1"># case of complex roots</span></div>
+
+
+
+<div class="viewcode-block" id="AreaZeroTimeBaseVec">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.AreaZeroTimeBaseVec">[docs]</a>
+<span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">AreaZeroTimeBaseVec</span><span class="p">(</span><span class="n">aix</span><span class="p">,</span> <span class="n">aiy</span><span class="p">,</span> <span class="n">bix</span><span class="p">,</span> <span class="n">biy</span><span class="p">,</span> <span class="n">cix</span><span class="p">,</span> <span class="n">ciy</span><span class="p">,</span> <span class="n">afx</span><span class="p">,</span> <span class="n">afy</span><span class="p">,</span>
+                        <span class="n">bfx</span><span class="p">,</span> <span class="n">bfy</span><span class="p">,</span> <span class="n">cfx</span><span class="p">,</span> <span class="n">cfy</span><span class="p">,</span> <span class="n">Tin</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Time of collapse for every simplex.</span>
+
+<span class="sd">    AreaZeroTimeBaseVec outputs two np arrays (length = number of simplices):</span>
+<span class="sd">    the time that the simplices crosses zero signed area (collapsed), and a</span>
+<span class="sd">    boolean indicating whether this time was &quot;good&quot; - i.e. inbetween Tin</span>
+<span class="sd">    and 1.  In the case of two times that are good, this returns the smaller</span>
+<span class="sd">    one.</span>
+
+<span class="sd">    The input are np arrays for the x and y positions of the three points</span>
+<span class="sd">    bounding each initial and final simplex, and Tin.</span>
+<span class="sd">    This solves a quadratic in the time variable</span>
+<span class="sd">    This version is vectorized and uses jit for a speed up</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Some intermediate variables to help cut down the number of</span>
+    <span class="c1"># algebraic operations needed</span>
+    <span class="n">caix</span> <span class="o">=</span> <span class="n">cix</span><span class="o">-</span><span class="n">aix</span>
+    <span class="n">caiy</span> <span class="o">=</span> <span class="n">ciy</span><span class="o">-</span><span class="n">aiy</span>
+    <span class="n">baix</span> <span class="o">=</span> <span class="n">bix</span><span class="o">-</span><span class="n">aix</span>
+    <span class="n">baiy</span> <span class="o">=</span> <span class="n">biy</span><span class="o">-</span><span class="n">aiy</span>
+    <span class="n">cafix</span> <span class="o">=</span> <span class="n">cfx</span><span class="o">-</span><span class="n">afx</span><span class="o">-</span><span class="n">caix</span>
+    <span class="n">cafiy</span> <span class="o">=</span> <span class="n">cfy</span><span class="o">-</span><span class="n">afy</span><span class="o">-</span><span class="n">caiy</span>
+    <span class="n">bafix</span> <span class="o">=</span> <span class="n">bfx</span><span class="o">-</span><span class="n">afx</span><span class="o">-</span><span class="n">baix</span>
+    <span class="n">bafiy</span> <span class="o">=</span> <span class="n">bfy</span><span class="o">-</span><span class="n">afy</span><span class="o">-</span><span class="n">baiy</span>
+    <span class="c1"># these are the three coefficients for the quadratic equation:</span>
+    <span class="c1"># a*t**2 + b*t + c</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cafix</span><span class="o">*</span><span class="n">bafiy</span> <span class="o">-</span> <span class="n">cafiy</span><span class="o">*</span><span class="n">bafix</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">caix</span><span class="o">*</span><span class="n">bafiy</span> <span class="o">-</span> <span class="n">caiy</span><span class="o">*</span><span class="n">bafix</span> <span class="o">+</span> <span class="n">cafix</span><span class="o">*</span><span class="n">baiy</span> <span class="o">-</span> <span class="n">cafiy</span><span class="o">*</span><span class="n">baix</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">caix</span><span class="o">*</span><span class="n">baiy</span> <span class="o">-</span> <span class="n">caiy</span><span class="o">*</span><span class="n">baix</span>
+    <span class="c1"># replacing the if statements with masks</span>
+    <span class="n">maz</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># mask for a == 0</span>
+    <span class="n">maznbz</span> <span class="o">=</span> <span class="n">maz</span> <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># mask for a == 0 and not b == 0</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">b</span><span class="o">*</span><span class="n">b</span> <span class="o">-</span> <span class="mi">4</span><span class="o">*</span><span class="n">a</span><span class="o">*</span><span class="n">c</span>   <span class="c1"># discriminant of the quadratic solution</span>
+    <span class="n">mqgz</span> <span class="o">=</span> <span class="o">~</span><span class="n">maz</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">q</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># not a == 0 and non-negative discriminant</span>
+    <span class="c1"># getting the roots</span>
+    <span class="c1"># initialization of array of roots (two rows for two</span>
+    <span class="c1"># possible positive roots)</span>
+    <span class="n">roots</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)))</span>
+    <span class="c1"># single solution for when a == 0 and b != 0</span>
+    <span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">maznbz</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">c</span><span class="p">[</span><span class="n">maznbz</span><span class="p">]</span><span class="o">/</span><span class="n">b</span><span class="p">[</span><span class="n">maznbz</span><span class="p">]</span>
+    <span class="c1"># for a != 0 and non-negative discriminant there are two real roots</span>
+    <span class="c1"># (possibly degenerate).  This first obtains the largest magnitude root</span>
+    <span class="c1"># to help with numerical stability (no catastrophic cancellation)</span>
+    <span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">mqgz</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">b</span><span class="p">[</span><span class="n">mqgz</span><span class="p">]</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">mqgz</span><span class="p">])</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">mqgz</span><span class="p">]))</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="n">mqgz</span><span class="p">])</span>
+    <span class="c1"># this obtains the other root t1*t2 = c/a</span>
+    <span class="n">roots</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">mqgz</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="n">mqgz</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">mqgz</span><span class="p">]</span><span class="o">*</span><span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">mqgz</span><span class="p">])</span>
+    <span class="c1"># masks to determine &quot;good&quot; roots</span>
+    <span class="c1"># mask for first root being between our time bounds</span>
+    <span class="n">t1ok</span> <span class="o">=</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">Tin</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># same for second root (note that roots was initialized with a</span>
+    <span class="c1"># value out of the bounds)</span>
+    <span class="n">t2ok</span> <span class="o">=</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">Tin</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">GoodSoln</span> <span class="o">=</span> <span class="n">t1ok</span> <span class="o">|</span> <span class="n">t2ok</span>  <span class="c1"># at least one good solution</span>
+    <span class="n">BothGood</span> <span class="o">=</span> <span class="n">t1ok</span> <span class="o">&amp;</span> <span class="n">t2ok</span>  <span class="c1"># both solutions are good - need to choose smallest</span>
+    <span class="c1"># only second solution is good - case where we need to put</span>
+    <span class="c1"># solution 2 in the place of 1</span>
+    <span class="n">Onlyt2Good</span> <span class="o">=</span> <span class="o">~</span><span class="n">t1ok</span> <span class="o">&amp;</span> <span class="n">t2ok</span>
+    <span class="c1"># smallest solution in the case of 2 good ones</span>
+    <span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">BothGood</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">BothGood</span><span class="p">],</span> <span class="n">roots</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">BothGood</span><span class="p">])</span>
+    <span class="c1"># putting solution 2 in the place of 1 when only 2 is a good solution</span>
+    <span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">Onlyt2Good</span><span class="p">]</span> <span class="o">=</span> <span class="n">roots</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">Onlyt2Good</span><span class="p">]</span>
+    <span class="c1"># outputting vector of good solutions and their times</span>
+    <span class="k">return</span> <span class="n">GoodSoln</span><span class="p">,</span> <span class="n">roots</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span></div>
+
+
+
+<div class="viewcode-block" id="CopyLocations">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.CopyLocations">[docs]</a>
+<span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">CopyLocations</span><span class="p">(</span><span class="n">posix</span><span class="p">,</span> <span class="n">posiy</span><span class="p">,</span> <span class="n">posfx</span><span class="p">,</span> <span class="n">posfy</span><span class="p">,</span> <span class="n">Dx</span><span class="p">,</span> <span class="n">Dy</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the copy locations for the final points.</span>
+
+<span class="sd">    CopyLocations outputs an array (length = number of points) of ids</span>
+<span class="sd">    (values 0-9). An id identifies the copy of the fundamental domain that</span>
+<span class="sd">    the final position is in. Takes in numpy vectors for the initial and final</span>
+<span class="sd">    positions (x and y), the domain width and height convention for the copy</span>
+<span class="sd">    ids: 0 (FD/middle center), 1 (lower left), 2 (lower center), 3 (lower</span>
+<span class="sd">    right), 4 (middle right), 5 (upper right), 6 (upper center), 7 (upper</span>
+<span class="sd">    left), 8 (middle left)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># initialize copy location array (default is zero, as most</span>
+    <span class="c1"># points don&#39;t exit the FD)</span>
+    <span class="n">copyloc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">posix</span><span class="p">))</span>
+    <span class="n">Deltax</span> <span class="o">=</span> <span class="n">posfx</span><span class="o">-</span><span class="n">posix</span>
+    <span class="n">Deltay</span> <span class="o">=</span> <span class="n">posfy</span><span class="o">-</span><span class="n">posiy</span>
+    <span class="n">Deltaxabs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Deltax</span><span class="p">)</span>
+    <span class="n">Deltayabs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Deltay</span><span class="p">)</span>
+    <span class="n">checkx</span> <span class="o">=</span> <span class="n">Deltaxabs</span> <span class="o">&gt;</span> <span class="n">Dx</span><span class="o">/</span><span class="mi">2</span>
+    <span class="n">checky</span> <span class="o">=</span> <span class="n">Deltayabs</span> <span class="o">&gt;</span> <span class="n">Dy</span><span class="o">/</span><span class="mi">2</span>
+    <span class="n">checkpoints</span> <span class="o">=</span> <span class="n">checkx</span> <span class="o">|</span> <span class="n">checky</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">checkpoints</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">signx</span> <span class="o">=</span> <span class="n">Deltax</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">signy</span> <span class="o">=</span> <span class="n">Deltay</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">checkx</span> <span class="o">=</span> <span class="n">checkx</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span>
+    <span class="n">checky</span> <span class="o">=</span> <span class="n">checky</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span>
+    <span class="n">iscorner</span> <span class="o">=</span> <span class="n">checkx</span> <span class="o">&amp;</span> <span class="n">checky</span>
+    <span class="n">ycross</span> <span class="o">=</span> <span class="o">~</span><span class="n">checkx</span> <span class="o">&amp;</span> <span class="n">checky</span>
+    <span class="n">xcross</span> <span class="o">=</span> <span class="n">checkx</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">checky</span>
+    <span class="n">nsignx</span> <span class="o">=</span> <span class="o">~</span><span class="n">signx</span>
+    <span class="n">nsigny</span> <span class="o">=</span> <span class="o">~</span><span class="n">signy</span>
+    <span class="n">iscorner_nsignx</span> <span class="o">=</span> <span class="n">iscorner</span> <span class="o">&amp;</span> <span class="n">nsignx</span>
+    <span class="n">iscorner_signx</span> <span class="o">=</span> <span class="n">iscorner</span> <span class="o">&amp;</span> <span class="n">signx</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">iscorner_signx</span> <span class="o">&amp;</span> <span class="n">signy</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">ycross</span> <span class="o">&amp;</span> <span class="n">signy</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">iscorner_nsignx</span> <span class="o">&amp;</span> <span class="n">signy</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">xcross</span> <span class="o">&amp;</span> <span class="n">nsignx</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">iscorner_nsignx</span> <span class="o">&amp;</span> <span class="n">nsigny</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">ycross</span> <span class="o">&amp;</span> <span class="n">nsigny</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">iscorner_signx</span> <span class="o">&amp;</span> <span class="n">nsigny</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">7</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">checkpoints</span><span class="p">]</span> <span class="o">=</span> <span class="n">xcross</span> <span class="o">&amp;</span> <span class="n">signx</span>
+    <span class="n">copyloc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="k">return</span> <span class="n">copyloc</span></div>
+
+
+
+<div class="viewcode-block" id="IsDelaunayBase">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsDelaunayBase">[docs]</a>
+<span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">IsDelaunayBase</span><span class="p">(</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Ay</span><span class="p">,</span> <span class="n">Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Cx</span><span class="p">,</span> <span class="n">Cy</span><span class="p">,</span> <span class="n">Dx</span><span class="p">,</span> <span class="n">Dy</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Is the quadrilateral Delaunay.</span>
+
+<span class="sd">    IsDelaunayBase is a vectorized (+jit) function which returns a True/False</span>
+<span class="sd">    array corresponding to whether the input quadrilateral (points A, B, C,</span>
+<span class="sd">    D in ccw order, and diagonal edge A-C) is Delaunay.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ADx</span> <span class="o">=</span> <span class="n">Ax</span> <span class="o">-</span> <span class="n">Dx</span>
+    <span class="n">ADy</span> <span class="o">=</span> <span class="n">Ay</span> <span class="o">-</span> <span class="n">Dy</span>
+    <span class="n">BDx</span> <span class="o">=</span> <span class="n">Bx</span> <span class="o">-</span> <span class="n">Dx</span>
+    <span class="n">BDy</span> <span class="o">=</span> <span class="n">By</span> <span class="o">-</span> <span class="n">Dy</span>
+    <span class="n">CDx</span> <span class="o">=</span> <span class="n">Cx</span> <span class="o">-</span> <span class="n">Dx</span>
+    <span class="n">CDy</span> <span class="o">=</span> <span class="n">Cy</span> <span class="o">-</span> <span class="n">Dy</span>
+    <span class="n">AD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">ADx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">ADy</span><span class="p">)</span>
+    <span class="n">BD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">BDx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">BDy</span><span class="p">)</span>
+    <span class="n">CD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">CDx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">CDy</span><span class="p">)</span>
+    <span class="n">detvals</span> <span class="o">=</span> <span class="p">(</span><span class="n">ADx</span><span class="o">*</span><span class="p">(</span><span class="n">BDy</span><span class="o">*</span><span class="n">CD2</span> <span class="o">-</span> <span class="n">CDy</span><span class="o">*</span><span class="n">BD2</span><span class="p">)</span> <span class="o">-</span> <span class="n">ADy</span><span class="o">*</span><span class="p">(</span><span class="n">BDx</span><span class="o">*</span><span class="n">CD2</span> <span class="o">-</span> <span class="n">CDx</span><span class="o">*</span><span class="n">BD2</span><span class="p">)</span>
+               <span class="o">+</span> <span class="n">AD2</span><span class="o">*</span><span class="p">(</span><span class="n">BDx</span><span class="o">*</span><span class="n">CDy</span> <span class="o">-</span> <span class="n">CDx</span><span class="o">*</span><span class="n">BDy</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">detvals</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="IsDelaunayBaseWMask">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsDelaunayBaseWMask">[docs]</a>
+<span class="nd">@jit</span><span class="p">(</span><span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">IsDelaunayBaseWMask</span><span class="p">(</span><span class="n">Ax</span><span class="p">,</span> <span class="n">Ay</span><span class="p">,</span> <span class="n">Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Cx</span><span class="p">,</span> <span class="n">Cy</span><span class="p">,</span> <span class="n">Dx</span><span class="p">,</span> <span class="n">Dy</span><span class="p">,</span> <span class="n">Mask</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Are the quadrilaterals Delaunay.</span>
+
+<span class="sd">    IsDelaunayBaseWMask is a vectorized (+jit) function which returns a</span>
+<span class="sd">    True/False array corresponding to whether the input quadrilateral</span>
+<span class="sd">    (points A, B, C, D in ccw order, and diagonal edge A-C) is Delaunay</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">IsD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Ax</span><span class="p">))</span>
+    <span class="n">ADx</span> <span class="o">=</span> <span class="n">Ax</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dx</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">ADy</span> <span class="o">=</span> <span class="n">Ay</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dy</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">BDx</span> <span class="o">=</span> <span class="n">Bx</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dx</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">BDy</span> <span class="o">=</span> <span class="n">By</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dy</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">CDx</span> <span class="o">=</span> <span class="n">Cx</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dx</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">CDy</span> <span class="o">=</span> <span class="n">Cy</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">-</span> <span class="n">Dy</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span>
+    <span class="n">AD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">ADx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">ADy</span><span class="p">)</span>
+    <span class="n">BD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">BDx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">BDy</span><span class="p">)</span>
+    <span class="n">CD2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">CDx</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">CDy</span><span class="p">)</span>
+    <span class="n">detvals</span> <span class="o">=</span> <span class="p">(</span><span class="n">ADx</span><span class="o">*</span><span class="p">(</span><span class="n">BDy</span><span class="o">*</span><span class="n">CD2</span> <span class="o">-</span> <span class="n">CDy</span><span class="o">*</span><span class="n">BD2</span><span class="p">)</span> <span class="o">-</span> <span class="n">ADy</span><span class="o">*</span><span class="p">(</span><span class="n">BDx</span><span class="o">*</span><span class="n">CD2</span> <span class="o">-</span> <span class="n">CDx</span><span class="o">*</span><span class="n">BD2</span><span class="p">)</span>
+               <span class="o">+</span> <span class="n">AD2</span><span class="o">*</span><span class="p">(</span><span class="n">BDx</span><span class="o">*</span><span class="n">CDy</span> <span class="o">-</span> <span class="n">CDx</span><span class="o">*</span><span class="n">BDy</span><span class="p">))</span>
+    <span class="n">IsD</span><span class="p">[</span><span class="n">Mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">detvals</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">IsD</span></div>
+
+
+
+<span class="c1"># these are some helper function used in plotting</span>
+<div class="viewcode-block" id="GetCenter">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetCenter">[docs]</a>
+<span class="k">def</span> <span class="nf">GetCenter</span><span class="p">(</span><span class="n">Points</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the geometric center of a set of points.</span>
+
+<span class="sd">    GetCenter returns the geometric average of the input points (usually 3 pts</span>
+<span class="sd">    in a triangle or 2 end points of a line)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">x1</span> <span class="ow">in</span> <span class="n">Points</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">+=</span> <span class="n">x1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Y</span> <span class="o">+=</span> <span class="n">x1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">X</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">Points</span><span class="p">),</span> <span class="n">Y</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">Points</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="GetCircumCircleCenter">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetCircumCircleCenter">[docs]</a>
+<span class="k">def</span> <span class="nf">GetCircumCircleCenter</span><span class="p">(</span><span class="n">PtsIn</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the circumcenter center of a set of 3 points.</span>
+
+<span class="sd">    GetCircumCircleCenter returns the coordinates of the center of the</span>
+<span class="sd">    circumcircle about the given three points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sqval</span> <span class="o">=</span> <span class="p">[</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">PtsIn</span><span class="p">]</span>
+    <span class="n">diffy</span> <span class="o">=</span> <span class="p">[</span><span class="n">PtsIn</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">PtsIn</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+    <span class="n">diffx</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="n">PtsIn</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">PtsIn</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="nb">sum</span><span class="p">([</span><span class="n">PtsIn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">diffy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+    <span class="n">PtOutx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">sqval</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">diffy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span><span class="o">/</span><span class="n">D</span>
+    <span class="n">PtOuty</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">sqval</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">diffx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span><span class="o">/</span><span class="n">D</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">PtOutx</span><span class="p">,</span> <span class="n">PtOuty</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="Curl">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.Curl">[docs]</a>
+<span class="k">def</span> <span class="nf">Curl</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Curl of two vectors.</span>
+
+<span class="sd">    Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2.</span>
+<span class="sd">    Output is single number (z-component of resultant vec)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">vec1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">vec2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vec1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">vec2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="GetIntersectionPoint">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetIntersectionPoint">[docs]</a>
+<span class="k">def</span> <span class="nf">GetIntersectionPoint</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the intersection point between two line segements.</span>
+
+<span class="sd">    GetIntersectionPoint returns the point of intersection between two lines</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">det</span> <span class="o">=</span> <span class="p">((</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+           <span class="o">-</span> <span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="p">(</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">det</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">bx</span> <span class="o">=</span> <span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">by</span> <span class="o">=</span> <span class="p">(</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">xout</span> <span class="o">=</span> <span class="p">(</span><span class="n">bx</span><span class="o">*</span><span class="p">(</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+                <span class="o">-</span> <span class="n">by</span><span class="o">*</span><span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span><span class="o">/</span><span class="n">det</span>
+        <span class="n">yout</span> <span class="o">=</span> <span class="p">(</span><span class="n">bx</span><span class="o">*</span><span class="p">(</span><span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                <span class="o">-</span> <span class="n">by</span><span class="o">*</span><span class="p">(</span><span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span><span class="o">/</span><span class="n">det</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">xout</span><span class="p">,</span> <span class="n">yout</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="GetIntersectionTimes">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.GetIntersectionTimes">[docs]</a>
+<span class="k">def</span> <span class="nf">GetIntersectionTimes</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parameterized &#39;times&#39; for the intersection of to line segments.</span>
+
+<span class="sd">    GetIntersectionTimes returns the two &quot;time&quot; parameters that correspond</span>
+<span class="sd">    to the intersection of two lines. Line1 and Line2 are parameterized by</span>
+<span class="sd">    the times t1 and t2 respectively (each is a linear interpolation from</span>
+<span class="sd">    their initial point to final point)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">det</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">d</span><span class="o">-</span><span class="n">b</span><span class="o">*</span><span class="n">c</span>
+    <span class="k">if</span> <span class="n">det</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Bx</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">By</span> <span class="o">=</span> <span class="n">Line2</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">t1</span> <span class="o">=</span> <span class="p">(</span><span class="n">d</span><span class="o">*</span><span class="n">Bx</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">By</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+        <span class="n">t2</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">c</span><span class="o">*</span><span class="n">Bx</span> <span class="o">+</span> <span class="n">a</span><span class="o">*</span><span class="n">By</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+        <span class="k">return</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span></div>
+
+
+
+<div class="viewcode-block" id="LinFuncInterp">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.LinFuncInterp">[docs]</a>
+<span class="k">def</span> <span class="nf">LinFuncInterp</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interpolate between two points.</span>
+
+<span class="sd">    LinFuncInterp returns the point a fraction t (0-1)</span>
+<span class="sd">    from point 1 (P1) to point 2 (P2)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="n">t</span><span class="p">)</span><span class="o">*</span><span class="n">P1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">t</span><span class="o">*</span><span class="n">P2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span></div>
+
+
+
+<div class="viewcode-block" id="BezierLinear">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BezierLinear">[docs]</a>
+<span class="k">def</span> <span class="nf">BezierLinear</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Linear Bezier curve.</span>
+
+<span class="sd">    BezierLinear creates a linear Bezier curve (line) for plotting based</span>
+<span class="sd">    on the 2 input points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">PathPatch</span><span class="p">(</span>
+        <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="p">([(</span><span class="n">P1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P1</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P2</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>
+                   <span class="p">[</span><span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">MOVETO</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">LINETO</span><span class="p">]))</span></div>
+
+
+
+<div class="viewcode-block" id="BezierQuad">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BezierQuad">[docs]</a>
+<span class="k">def</span> <span class="nf">BezierQuad</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">P3</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quadratic Bezier Curve.</span>
+
+<span class="sd">    BezierQuad creates a quadratic Bezier curve for plotting based on the</span>
+<span class="sd">    3 input points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">PathPatch</span><span class="p">(</span>
+        <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="p">([(</span><span class="n">P1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P1</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P2</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P3</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P3</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>
+                   <span class="p">[</span><span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">MOVETO</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE3</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE3</span><span class="p">]))</span></div>
+
+
+
+<div class="viewcode-block" id="BezierCubic">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BezierCubic">[docs]</a>
+<span class="k">def</span> <span class="nf">BezierCubic</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">P3</span><span class="p">,</span> <span class="n">P4</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cubic Bezier Curve.</span>
+
+<span class="sd">    BezierCubic creates a cubic Bezier curve for plotting based on the</span>
+<span class="sd">    4 input points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">PathPatch</span><span class="p">(</span><span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span>
+        <span class="p">[(</span><span class="n">P1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P1</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P2</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P3</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P3</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P4</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P4</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>
+        <span class="p">[</span><span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">MOVETO</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE4</span><span class="p">,</span>
+         <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE4</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE4</span><span class="p">]))</span></div>
+
+
+
+<div class="viewcode-block" id="BezierCustom">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.BezierCustom">[docs]</a>
+<span class="k">def</span> <span class="nf">BezierCustom</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">P3</span><span class="p">,</span> <span class="n">P4</span><span class="p">,</span> <span class="n">P5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bezier Curve - Custom.</span>
+
+<span class="sd">    BezierCustom creates a line-quadratic-line Bezier curve for plotting based</span>
+<span class="sd">    on the 5 input points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">PathPatch</span><span class="p">(</span>
+        <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="p">([(</span><span class="n">P1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P1</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P2</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P3</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P3</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="p">(</span><span class="n">P4</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P4</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">P5</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">P5</span><span class="p">[</span><span class="mi">1</span><span class="p">])],</span>
+                   <span class="p">[</span><span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">MOVETO</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">LINETO</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE3</span><span class="p">,</span>
+                    <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">CURVE3</span><span class="p">,</span> <span class="n">mpath</span><span class="o">.</span><span class="n">Path</span><span class="o">.</span><span class="n">LINETO</span><span class="p">]))</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Spencer A. Smith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>top_advec_base &mdash; TopologicalAdvection  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            TopologicalAdvection
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">TopologicalAdvection</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">top_advec_base</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for top_advec_base</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;The base module for the topological advection algorithm.</span>
+
+<span class="sd">This module contains the abstract base classes for the topological advection</span>
+<span class="sd">algorithm, and is meant to be a template for concrete versions of these</span>
+<span class="sd">classes.  The topological advection algorithm takes trajectories of point</span>
+<span class="sd">particles in 2D and determines how this motion affects the state of material</span>
+<span class="sd">curves in the surrounding medium.  Curves are encoded topologically as &#39;loops&#39;</span>
+<span class="sd">with a triangulation of the points acting as a basis for the loops.  As the</span>
+<span class="sd">points move, the triangulation is updated, and operators which act on loops</span>
+<span class="sd">are accumulated.</span>
+
+<span class="sd">Classes</span>
+<span class="sd">-------</span>
+<span class="sd">Simplex2D_Base</span>
+<span class="sd">    Base class representing a triangle / 2D simplex</span>
+
+<span class="sd">Loop_Base</span>
+<span class="sd">    Base class representing a topological loop or set of loops.</span>
+
+<span class="sd">WeightOperator_Base</span>
+<span class="sd">    Base class representing an operator that acts on loops.</span>
+
+<span class="sd">PlotParameters:</span>
+<span class="sd">    Data class for grouping plot parameters</span>
+
+<span class="sd">Triangulation2D_Base</span>
+<span class="sd">    Base class representing a triangulation of data points in a 2D domain.</span>
+<span class="sd">    With methods for evolving the triangulation forward due to moving points,</span>
+<span class="sd">    intializing loops, evolving loops, and plotting.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+
+
+<span class="c1"># Simplex2D_Base class #######################################################</span>
+<div class="viewcode-block" id="Simplex2D_Base">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Simplex2D_Base">[docs]</a>
+<span class="k">class</span> <span class="nc">Simplex2D_Base</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class representing a triangle / 2D simplex.</span>
+
+<span class="sd">        (used in a 2D triangulation object)</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    points : list of 3 ints</span>
+<span class="sd">        List of the 3 vertex point IDs. These IDs will be used to get</span>
+<span class="sd">        the vertex spatial locations from a master list that is a</span>
+<span class="sd">        Triangulation2D attribue. Note that the order is only unique up</span>
+<span class="sd">        to an even permutation. The permuation given on initialization</span>
+<span class="sd">        is assumed to correspond to a set of geometric points that are</span>
+<span class="sd">        given in counter clock-wise, CCW, order. Moving about this list</span>
+<span class="sd">        (and other Simplex2D attributes) is done via modular</span>
+<span class="sd">        arithmatic: (i+1)%3 to move CCW about the simplex from index i,</span>
+<span class="sd">        and (i+2)%3 to move CW.</span>
+
+<span class="sd">    simplices : list of 3 simplex objects</span>
+<span class="sd">        List of the 3 simplices adjacent to this simplex. Convention:</span>
+<span class="sd">        simplex at position i in this list is adjacent to this simplex</span>
+<span class="sd">        at the edge across from self.points[i]</span>
+
+<span class="sd">    edgeids : list of 3 ints</span>
+<span class="sd">        List of the 3 edge ids. Each edge has an identifying integer</span>
+<span class="sd">        that is used when keeping track of loop coordinates (in loop</span>
+<span class="sd">        class).</span>
+
+<span class="sd">    SLindex : int</span>
+<span class="sd">        ID of this simplex in a Simplex List attribute of</span>
+<span class="sd">        Triangulation2D (simplist). This is useful for going back and</span>
+<span class="sd">        forth from the local view (Simplex2D object) and the global</span>
+<span class="sd">        view (Triangulation2D object)</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    LocalID(IDin)</span>
+<span class="sd">        Given the ID (IDin) of a vertex/point in this triangle, this</span>
+<span class="sd">        returns the local ID, i.e. the integer i = 0,1,2 s.t.</span>
+<span class="sd">        self.points[i] = IDin</span>
+
+<span class="sd">    SimpNeighbors(IDin)</span>
+<span class="sd">        Find the simplices about a given point</span>
+
+<span class="sd">    EdgeNeighbors(IDin)</span>
+<span class="sd">        Find the ids of edges about a given point</span>
+
+<span class="sd">    SimpLink(S_other)</span>
+<span class="sd">        Link self with S_other simplex</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">IDlist</span><span class="p">):</span>
+        <span class="n">Simplex2D_Base</span><span class="o">.</span><span class="n">_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">IDlist</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">IDlist</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simplices</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edgeids</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SLindex</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Simplex2D_Base</span><span class="o">.</span><span class="n">_count</span> <span class="o">-=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span> <span class="ow">is</span> <span class="n">other</span>  <span class="c1"># all comparisions by object id, not value.</span>
+
+<div class="viewcode-block" id="Simplex2D_Base.LocalID">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Simplex2D_Base.LocalID">[docs]</a>
+    <span class="k">def</span> <span class="nf">LocalID</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">IDin</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the local id of a given point id.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        IDin : int</span>
+<span class="sd">            The ID of a vertex/point in this simplex.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            the local ID corresponding to IDin. i.e. the integer</span>
+<span class="sd">            i = 0,1,2  s.t. self.points[i] = IDin</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">points</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">IDin</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Simplex2D_Base.SimpNeighbors">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Simplex2D_Base.SimpNeighbors">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">SimpNeighbors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">IDin</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the simpices which share a point. Abstract method.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="Simplex2D_Base.EdgeNeighbors">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Simplex2D_Base.EdgeNeighbors">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">EdgeNeighbors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">IDin</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the edges which share a point. Abstract method.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="Simplex2D_Base.SimpLink">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Simplex2D_Base.SimpLink">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">SimpLink</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">S_other</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Links this simplex with S_other (and vice versa).&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+<span class="c1"># End Simplex2D_Base class ###################################################</span>
+
+
+<span class="c1"># Loop Class #################################################################</span>
+<div class="viewcode-block" id="Loop_Base">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Loop_Base">[docs]</a>
+<span class="k">class</span> <span class="nc">Loop_Base</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class representing a topological loop or set of loops.</span>
+
+<span class="sd">    The coordinate system (basis) for this representation is fixed by a</span>
+<span class="sd">    particular Triangulation2D object.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    weightlist : list/dict</span>
+<span class="sd">        representation of a loop via intersection/shear coordinates.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    GetWeightTotal()</span>
+<span class="sd">        Return the sum of the intersection coordinates (weights),</span>
+<span class="sd">        which is a good proxy for the length of the loop.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Loop_Base.GetWeightTotal">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Loop_Base.GetWeightTotal">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">GetWeightTotal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the sum of the intersection coordinates (weights).</span>
+
+<span class="sd">        This is a good proxy for the length of the loop.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="Loop_Base.LoopCopy">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Loop_Base.LoopCopy">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">LoopCopy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make a copy of the loop and return it.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+<span class="c1"># End of Loop Class ##########################################################</span>
+
+
+<span class="c1"># WeightOperator Class #######################################################</span>
+<div class="viewcode-block" id="WeightOperator_Base">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.WeightOperator_Base">[docs]</a>
+<span class="k">class</span> <span class="nc">WeightOperator_Base</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class representing an operator that acts on loops.</span>
+
+<span class="sd">        It is generated every time a triangulation flip occurs during</span>
+<span class="sd">        the evolution of a triangulation object, and holds the</span>
+<span class="sd">        information needed to update the weightlist of a loop.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    Update(LoopIn)</span>
+<span class="sd">        Update the weightlist attribute of LoopIn.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="WeightOperator_Base.Update">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.WeightOperator_Base.Update">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">Update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the weightlist attribute of LoopIn.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        LoopIn : Loop Object</span>
+<span class="sd">            This is the loop whose weightlist will be updated</span>
+<span class="sd">            (in place).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+<span class="c1"># End of WeightOperator Class ################################################</span>
+
+
+<span class="c1"># PlotParameters Class ######################################################</span>
+<div class="viewcode-block" id="PlotParameters">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.PlotParameters">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">PlotParameters</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data class for grouping the print parameters.</span>
+
+<span class="sd">    Contains all of the parameters used in printing the</span>
+<span class="sd">    triangulation and loops, and their default values.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        The filename (including local path) to save the figure as.</span>
+<span class="sd">        If None (default), then then the figure is printed to screen.</span>
+
+<span class="sd">    triplot : bool</span>
+<span class="sd">        Flag - prints the background triangulation if True (default)</span>
+<span class="sd">        and excludes it if False.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ____</span>
+<span class="sd">    Many other parameters will be added in the child classes</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">triplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<span class="c1"># End PlotParameters Class ##################################################</span>
+
+
+<span class="c1"># Triangulation2D_Base Class #################################################</span>
+<div class="viewcode-block" id="Triangulation2D_Base">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base">[docs]</a>
+<span class="k">class</span> <span class="nc">Triangulation2D_Base</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The central class in the overal Topological Advection algorithm.</span>
+
+<span class="sd">    This class represents a triangulation of data points in a 2D</span>
+<span class="sd">    domain.  It has methods for evolving the triangulation due to the</span>
+<span class="sd">    motion of data points, acting as a basis for encoding loops,</span>
+<span class="sd">    accumulating weight operators, and plotting.  This abstract base</span>
+<span class="sd">    class then has different child classes for different situations</span>
+<span class="sd">    (doubly periodic boundary conditions, given boundary, etc.).</span>
+
+<span class="sd">    Note: Only the main attribues and methods are listed here.</span>
+<span class="sd">    </span>
+<span class="sd">    Note: The triangulation is initialized as a Delaunay triangulation.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pointlist : list</span>
+<span class="sd">        A list of simplex objects.  Object at index i has the point</span>
+<span class="sd">        with point id i in its point list.  Allows for O(1) lookup of</span>
+<span class="sd">        points in the triangulation.  Note, not every simplex is in</span>
+<span class="sd">        this list.</span>
+
+<span class="sd">    pointpos : list</span>
+<span class="sd">        A list of the [x,y] positions for the points at the current</span>
+<span class="sd">        time</span>
+
+<span class="sd">    pointposfuture : list</span>
+<span class="sd">        List of the [x,y] positions at the next time step.  Used with</span>
+<span class="sd">        the Evolution method.</span>
+
+<span class="sd">    simplist : list</span>
+<span class="sd">        List of all of the simplices that make up the triangulation.</span>
+<span class="sd">        Individual simplices have an id (SLindex) that indicates their</span>
+<span class="sd">        location in this list.</span>
+
+<span class="sd">    WeightOperatorList : list</span>
+<span class="sd">        List of WeightOperator objects.  As the triangulation is</span>
+<span class="sd">        evolved forward due to point motions, retriangulations with</span>
+<span class="sd">        edge flips are needed.  For each flip, we record the data</span>
+<span class="sd">        needed to evolve a loop forward.  This list is ordered</span>
+<span class="sd">        (increasing) in time.</span>
+
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    Evolve(ptlist, Maintain_Delaunay = False)</span>
+<span class="sd">        This evolves the triangulation forward due to the motion of the</span>
+<span class="sd">        points - new point positions in ptlist. Options for evolution</span>
+<span class="sd">        via collapse events or to maintain a Delaunay triangulation.</span>
+<span class="sd">        For every edge flip needed, a WeightOperator is added to the</span>
+<span class="sd">        WeightOperator list.</span>
+
+<span class="sd">    OperatorAction(LoopIn, index = None, Reverse = False, option = 3)</span>
+<span class="sd">        This evolves forward an individual loop object (i.e. updates</span>
+<span class="sd">        its weightlist due to the action of the WeightOperators in</span>
+<span class="sd">        WeightOperatorList).</span>
+
+<span class="sd">    Plot(LoopIn = None, PP: PlotParameters = PlotParameters())</span>
+<span class="sd">        This plots the triangulation and loop.  See PlotParameters</span>
+<span class="sd">        data class documentation for details on the many options.</span>
+
+<span class="sd">    TriCopy(EvolutionReset = True)</span>
+<span class="sd">        This returns a copy of this Triangulation2D object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ptlist</span><span class="p">,</span> <span class="n">empty</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Triangulation Initialization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ptlist : list</span>
+<span class="sd">            ptlist is the list of [x,y] positions for the points at the</span>
+<span class="sd">            initial time.</span>
+
+<span class="sd">        empty : bool</span>
+<span class="sd">            Used for creating an empty object, which is then used for</span>
+<span class="sd">            object copying.  Default is False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atstep</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pointlist</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pointpos</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pointposfuture</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simplist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_totalnumedges</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">WeightOperatorList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_Vec</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># for small number of points, the non-vectorized version</span>
+        <span class="c1"># of a few functions will be faster</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ptlist</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Vec</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">empty</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_LoadPos</span><span class="p">(</span><span class="n">ptlist</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_SetInitialTriangulation</span><span class="p">()</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_LoadPos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ptlist</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_SetInitialTriangulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Triangulation2D_Base.Evolve">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.Evolve">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ptlist</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve the triangulation forward.</span>
+
+<span class="sd">        Main method for evolving the state of the triangulation</span>
+<span class="sd">        forward in time.  This assumes that the starting triangulation</span>
+<span class="sd">        is good (no negative areas).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ptlist : list</span>
+<span class="sd">            The new time-slice data; the list of [x,y] positions for</span>
+<span class="sd">            the points at the next time-step.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#  Overview: load the new positions, find the events, deal with the</span>
+        <span class="c1">#  events, update the current position, and maintain delaunay if</span>
+        <span class="c1">#  needed.</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_LoadNewPos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ptlist</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_GetEvents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_GetCollapseEvents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find triangle collapse events.</span>
+
+<span class="sd">        This finds all of the events where a triangle will go through</span>
+<span class="sd">        zero area in the course of the points evolving from this time</span>
+<span class="sd">        to the next time-step.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            A list of the simplices that collapse and the time of their</span>
+<span class="sd">            collapse (bundled as a list of two items).  This list is</span>
+<span class="sd">            sorted in decending order so that removing from the end</span>
+<span class="sd">            (smallest times first) inccurs the smallest computational</span>
+<span class="sd">            cost.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_AreaZeroTimeMultiple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Tin</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Vectorized calculation of collapse times.</span>
+
+<span class="sd">        Goes through every simplex and looks for whether the area zero</span>
+<span class="sd">        time is between Tin and 1.  Similar to AreaZeroTimeSingle, but</span>
+<span class="sd">        wrapping up the info in numpy arrays to get vectorization and</span>
+<span class="sd">        jit boost.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Tin : float</span>
+<span class="sd">            The lower bound on the time window to consider.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            list of booleans, indicating whether the simplex (with this</span>
+<span class="sd">            index) collapsed within the interval.</span>
+
+<span class="sd">        list</span>
+<span class="sd">            list of floats, giving the collapse times.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_AreaZeroTimeSingle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simp</span><span class="p">,</span> <span class="n">Tin</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate collapse time.</span>
+
+<span class="sd">        Finds whether (and when) a triangle (simp) goes through zero</span>
+<span class="sd">        area.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        simp : Simplex2D object</span>
+<span class="sd">            The simplex to consider.</span>
+
+<span class="sd">        Tin : float</span>
+<span class="sd">            The lower bound on the time window to consider.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            Returns a pair [IsSoln, TimeOut], where IsSoln is a boolean</span>
+<span class="sd">            that is True if the first time at which the area goes</span>
+<span class="sd">            through zero is between Tin and 1, and False if not. For</span>
+<span class="sd">            IsSoln == True, TimeOut gives this time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_UpdatePtPos</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pointpos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pointposfuture</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_GEvolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">EventLists</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Process the events in EventLists.</span>
+
+<span class="sd">        Processes an ordered list of events (collapse, and crossing -</span>
+<span class="sd">        if periodic boundary conditions) and does edge flips to update</span>
+<span class="sd">        the triangulation.  Also adds in new events as needed. Finished</span>
+<span class="sd">        when there are no more events in the time interval, and the</span>
+<span class="sd">        triangulation is consistent with the new set of points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_SFix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SimpIn</span><span class="p">,</span> <span class="n">tcollapse</span><span class="p">):</span>
+        <span class="c1">#  Fixing a simplex and the surrounding affected simplices.</span>
+        <span class="c1">#  This returns the two new simplices, so that they can be</span>
+        <span class="c1">#  possibly added to the local event list, also the bad simplex</span>
+        <span class="c1">#  so it can be removed (if needed from the local event list)</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_CollapsePt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SimpIn</span><span class="p">,</span> <span class="n">tcol</span><span class="p">):</span>
+        <span class="c1">#  This returns the point (internal id) that passes through its</span>
+        <span class="c1">#  opposite edge during an area collapse event known to occur</span>
+        <span class="c1">#  at t = tcol</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_GetSimpCurrentLoc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SimpIn</span><span class="p">,</span> <span class="n">tcol</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the location of simplex points at given time.</span>
+
+<span class="sd">        This returns the linearly interpolated positions of the three</span>
+<span class="sd">        points in SimpIn at time tcol.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_EdgeFlip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">AdjSimps</span><span class="p">,</span> <span class="n">EdgeShare</span><span class="p">,</span> <span class="n">TimeIn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flip an edge in the triangulation.</span>
+
+<span class="sd">        EdgeFlip locally re-triangulates the triangulation by removing</span>
+<span class="sd">        an edge that divides two adjacent triangles in a quadrilateral,</span>
+<span class="sd">        and replaces it with the other diagonal of this quadrilateral.</span>
+<span class="sd">        This removes the old simplices, creates new ones, and links</span>
+<span class="sd">        them up in the triangulation. EdgeFlip also creates the</span>
+<span class="sd">        appropriate WeightOperator object and adds it to the</span>
+<span class="sd">        WeightOperator list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        AdjSimps : list of 2 Simplex2D objects</span>
+<span class="sd">            These are the two simplices that share the edge to be</span>
+<span class="sd">            flipped</span>
+
+<span class="sd">        EdgeShare : int</span>
+<span class="sd">            The edge id of the edge to be flipped.  While this can</span>
+<span class="sd">            almost always be found from AdjSimps, the redundancy helps</span>
+<span class="sd">            in certain cases.</span>
+
+<span class="sd">        TimeIn : float</span>
+<span class="sd">            This is the time when the event occured that required a</span>
+<span class="sd">            flip. It is added as part of the data in the WeightOperator</span>
+<span class="sd">            object.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of 2 Simplex2D objects</span>
+<span class="sd">            The two new simplices.  Returned so that the calling</span>
+<span class="sd">            function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Triangulation2D_Base.MakeDelaunay">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.MakeDelaunay">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">MakeDelaunay</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flip edges until the triangulation is Delaunay.</span>
+
+<span class="sd">        MakeDelaunay takes the current triangulation and, through a</span>
+<span class="sd">        series of edge flips, changes it into the Delaunay</span>
+<span class="sd">        triangulation for this point configuration.  This function</span>
+<span class="sd">        changes the underlying triangulation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="Triangulation2D_Base.OperatorAction">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.OperatorAction">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">OperatorAction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">option</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flip operator acting on a Loop.</span>
+
+<span class="sd">        OperatorAction takes the accumulated operator list stored in</span>
+<span class="sd">        WeightOperatorList and operates sucessively on the given Loop</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        LoopIn : Loop Object</span>
+<span class="sd">            The weightlist of this loop will be modified in place</span>
+
+<span class="sd">        index : list of 2 ints</span>
+<span class="sd">            the start and stop index can also be specified to break</span>
+<span class="sd">            this up into stages (only used for option 1 and 2). Default</span>
+<span class="sd">            is None</span>
+
+<span class="sd">        Reverse : bool</span>
+<span class="sd">            Reverse does the operator actions in reverse order (i.e.</span>
+<span class="sd">            for loops in the final triangulation)</span>
+
+<span class="sd">        option : int {1,2,3}</span>
+<span class="sd">            option 1 just changes the data in the loop object.</span>
+<span class="sd">            option 2 also accumulates a weight list with the total</span>
+<span class="sd">            weights after each operator has acted on the loop, and</span>
+<span class="sd">            gives the global time of the operator action.</span>
+<span class="sd">            option 3 (the default) returns a weight list which has the</span>
+<span class="sd">            weights at the end of each time step (the intervals between</span>
+<span class="sd">            each use of the Evolve method). This weight list does not</span>
+<span class="sd">            have the time listed, as this is only know externally. this</span>
+<span class="sd">            is most useful for producing a list that we can directly</span>
+<span class="sd">            tie to an external list of times. This is what we need for</span>
+<span class="sd">            extracting the topological entropy (hence the default</span>
+<span class="sd">            option).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_BandWeightInitialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rbands</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a loop with band data.</span>
+
+<span class="sd">        This initializes the edge weights in `LoopIn` that correspond</span>
+<span class="sd">        to a given band (or set of bands) in `rbands`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rbands : list</span>
+<span class="sd">            Each element in the list represents a band, and consists of</span>
+<span class="sd">            two items: the list of points which define a band (see Loop</span>
+<span class="sd">            class documentation), and the weight to add to the loop</span>
+<span class="sd">            weightlist.</span>
+
+<span class="sd">        LoopIn : Loop object</span>
+<span class="sd">            The weightlist of `LoopIn` will be modified to represent</span>
+<span class="sd">            this additional set of bands being added in.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_CurveWeightInitialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curves</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a loop with curve data.</span>
+
+<span class="sd">        This initializes the edge weights in `LoopIn` that correspond to a</span>
+<span class="sd">        given set of curves in `curves`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        curves : list</span>
+<span class="sd">            Each element in the list represents a curve, and consists of four</span>
+<span class="sd">            items: the list of point positions [[x_0,y_0],[x_1,y_1],...],</span>
+<span class="sd">            whether the curve is closed (bool), whether the end points are</span>
+<span class="sd">            pinned [bool,bool], and finally, the weight to add to the loop</span>
+<span class="sd">            weightlist.</span>
+
+<span class="sd">        LoopIn : Loop object</span>
+<span class="sd">            The weightlist of LoopIn will be modified to represent this</span>
+<span class="sd">            additional set of curves being added in.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_ShearWeightInitialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">RegLoop</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a loop a shear coordinate version of another loop.</span>
+
+<span class="sd">        This takes the regular edge weights (for some band) encoded in</span>
+<span class="sd">        `RegLoop`, and uses the triangulation connectivity to initialize</span>
+<span class="sd">        `LoopIn`, which represents the band in shear coordinates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        RegLoop : Loop object</span>
+<span class="sd">            A loop already initialized with regular coordinates.</span>
+
+<span class="sd">        LoopIn : Loop object</span>
+<span class="sd">            The loop that will be initialized with shear coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Triangulation2D_Base.Plot">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.Plot">[docs]</a>
+    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span> <span class="o">=</span> <span class="n">PlotParameters</span><span class="p">()):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;General Plotting function.</span>
+
+<span class="sd">        Plots the points, triangulation, and loops with a large variety</span>
+<span class="sd">        of options specified in PlotParameters (see the documentation for</span>
+<span class="sd">        PlotParameters data class for more details).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        LoopIn : Loop object</span>
+<span class="sd">            If a loop object is passed, then the train-track associated with</span>
+<span class="sd">            this loop will be included in the plot. Default is None.</span>
+
+<span class="sd">        PP : PlotParameters data object</span>
+<span class="sd">            All of the options for customizing the plot are wrapped up in</span>
+<span class="sd">            this data object.  The top-level attributes of PP that are used</span>
+<span class="sd">            in Plot are:</span>
+
+<span class="sd">        filename : str</span>
+<span class="sd">            The filename (including local path) to save the figure as.</span>
+<span class="sd">            If None (default), then then the figure is printed to screen.</span>
+
+<span class="sd">        triplot : bool</span>
+<span class="sd">            Flag - prints the background triangulation if True (default) and</span>
+<span class="sd">            excludes it if False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#  the preliminary plotting settings</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_PlotPrelims</span><span class="p">(</span><span class="n">PP</span><span class="p">)</span>
+        <span class="c1">#  the underlying triangulation</span>
+        <span class="k">if</span> <span class="n">PP</span><span class="o">.</span><span class="n">triplot</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_TriangulationPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
+        <span class="c1">#  the points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_PointPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
+        <span class="c1">#  only plot the traintrack if a Loop is given</span>
+        <span class="k">if</span> <span class="n">LoopIn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_TTPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">PP</span><span class="o">.</span><span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">PP</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_PlotPrelims</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preliminary setup for plotting.</span>
+
+<span class="sd">        Handles the initial setup for the figure.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        PP : PlotParameters object</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        fig : matplotlib fig object</span>
+<span class="sd">            Not currently used, but might be used in the future to</span>
+<span class="sd">            add another subplot</span>
+
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            This is used to add features to the current plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_TriangulationPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the triangulation.</span>
+
+<span class="sd">        Plots the underlying triangulation</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        PP : PlotParameters object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_PointPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the points.</span>
+
+<span class="sd">        Plots the data points.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        PP : PlotParameters object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_TTPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the loop.</span>
+
+<span class="sd">        Plots the train-track representation of the loop</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        LoopIn : Loop object</span>
+<span class="sd">            The data in LoopIn determine the train-track</span>
+
+<span class="sd">        PP : PlotParameters object</span>
+<span class="sd">            For this method, the relevant PlotParameters attributes are:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Triangulation2D_Base.TriCopy">
+<a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.TriCopy">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">TriCopy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">EvolutionReset</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a copy of this Triangulation2D object.</span>
+
+<span class="sd">        Custom, as a deepcopy is not sufficient.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        EvolutionReset : bool</span>
+<span class="sd">            If True (default), then the WeightOperatorList is reset to</span>
+<span class="sd">            be an empty list.  i.e. the memory of any past evolution</span>
+<span class="sd">            is ignored.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Triangulation2D object</span>
+<span class="sd">            Returns a copy of this Triangulation2D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Spencer A. Smith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

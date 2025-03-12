@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>topological_advection &mdash; TopologicalAdvection  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            TopologicalAdvection
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">TopologicalAdvection</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">topological_advection</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for topological_advection</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Main module for using the topological advection algorithm.</span>
+
+<span class="sd">This top level module provides classes and methods to do the most common</span>
+<span class="sd">actions with the topological advection algorithm (Evolve the triangulation,</span>
+<span class="sd">calculate the topological entropy, initialize a curve, evolve the curve, plot</span>
+<span class="sd">the triangulation and curve, create images for a movie).  This module accesses</span>
+<span class="sd">the appropriate child module of top_advec_base.py (top_advec_bnd.py or</span>
+<span class="sd">top_advec_pbc.py) based on the specified use case (trajectories are bounded</span>
+<span class="sd">on a plane or are on a doubly periodic domain/torus).</span>
+
+<span class="sd">The topological advection algorithm takes trajectories of point particles in</span>
+<span class="sd">2D and determines how this motion affects the state of material curves in the</span>
+<span class="sd">surrounding medium. Curves are encoded topologically as &#39;loops&#39; with a</span>
+<span class="sd">triangulation of the points acting as a basis for the loops. As the points</span>
+<span class="sd">move, the triangulation is updated, and operators which act on loops are</span>
+<span class="sd">accumulated.</span>
+
+<span class="sd">Classes</span>
+<span class="sd">-------</span>
+<span class="sd">TopologicalAdvection</span>
+<span class="sd">    Main class. Trajectories &amp; times as attributes and main actions as methods</span>
+
+<span class="sd">CurveSet</span>
+<span class="sd">    Set of curves as an attribute, with built-in mothods for generating</span>
+<span class="sd">    geometric curves (which are used to initialize topological loops in</span>
+<span class="sd">    TopologicalAdvection objects)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">top_advec_bnd</span>
+<span class="kn">import</span> <span class="nn">top_advec_pbc</span>
+<span class="kn">import</span> <span class="nn">helper_fns</span> <span class="k">as</span> <span class="nn">HF</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">asdict</span>
+
+
+<div class="viewcode-block" id="TopologicalAdvection">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection">[docs]</a>
+<span class="k">class</span> <span class="nc">TopologicalAdvection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class realizing the topological advection algorithm.</span>
+
+<span class="sd">    The topological advection algorithm takes trajectories of point particles</span>
+<span class="sd">    in 2D and determines how this motion affects the state of material curves</span>
+<span class="sd">    in the surrounding medium. Curves are encoded topologically as &#39;loops&#39;</span>
+<span class="sd">    with a triangulation of the points acting as a basis for the loops. As the</span>
+<span class="sd">    points move, the triangulation is updated, and operators which act on</span>
+<span class="sd">    loops are accumulated.</span>
+
+<span class="sd">    This top level class has attributes and methods to do the most common</span>
+<span class="sd">    actions with the topological advection algorithm (Evolve the triangulation,</span>
+<span class="sd">    calculate the topological entropy, initialize a curve, evolve the curve,</span>
+<span class="sd">    plot the triangulation and curve, create images for a movie).</span>
+
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Tslices : list of lists</span>
+<span class="sd">        Tslices is short for time-slices (of the trajectory data), and</span>
+<span class="sd">        represents the set of point trajectories over time.  The first index</span>
+<span class="sd">        indexes the time slice, and len(Tslices) = len(Times).  The second</span>
+<span class="sd">        index indexes the particle id (particle ids are implicit, and a given</span>
+<span class="sd">        particle will always have its data in the same position in any time</span>
+<span class="sd">        slice).  So len(Tslices[t]) = number of particles (for any</span>
+<span class="sd">        t &lt; len(Times)).  The third index indexes the x/y direction choice.</span>
+<span class="sd">        So, Tslices[t][p][0] gives the x position of the pth particle at time</span>
+<span class="sd">        slice t, while Tslices[t][p][1] gives the y position.</span>
+
+<span class="sd">    Times : list of floats</span>
+<span class="sd">        The times at which the time slices were taken.  These are needed to</span>
+<span class="sd">        give quantitative meaning to the Topological Entropy (per unit time).</span>
+<span class="sd">        Must have len(Times) = len(Tslices). If no Times list is passed on</span>
+<span class="sd">        initialization, a simple list with equal increments of 1 is generated.</span>
+
+<span class="sd">    Domain : list of lists</span>
+<span class="sd">        This is the rectangular bounding domain for the trajectories.  It has</span>
+<span class="sd">        the format [[x_min, y_min], [x_max, y_max]].  In the case of periodic</span>
+<span class="sd">        boundary conditions (PeriodicBC is True), x_min and y_min must be 0. If</span>
+<span class="sd">        no domain is passed on initialization, one will be generated based on</span>
+<span class="sd">        the max and min x/y positions of the particles (not ideal for periodic</span>
+<span class="sd">        boundary case).</span>
+
+<span class="sd">    PeriodicBC : bool</span>
+<span class="sd">        Does the data live on a doubly periodic domain/torus (PeriodicBC is</span>
+<span class="sd">        True), or does it live on a bounded piece of the plane (PeriodicBC is</span>
+<span class="sd">        False - default)?  This flag determines which module is used:</span>
+<span class="sd">        (top_advec_bnd.py or top_advec_pbc.py).</span>
+
+<span class="sd">    TA : module name</span>
+<span class="sd">        This references the appropriate module (top_advec_bnd or top_advec_pbc)</span>
+<span class="sd">        based on the flag PeriodicBC.  Both modules have identically named</span>
+<span class="sd">        classes, class methods, and class attributes (enforced by the shared</span>
+<span class="sd">        parent abstract base class), so, for example, self.TA.triangulation2D()</span>
+<span class="sd">        will create a triangulation in both cases.</span>
+
+<span class="sd">    PlotParameters : PlotParameters object</span>
+<span class="sd">        This data object contains all the parameters that are needed to specify</span>
+<span class="sd">        a triangulation/loop plot.  See PlotParameters docs for a complete list</span>
+<span class="sd">        of the options/parameters.  Use method SetPlotParameters() to a set</span>
+<span class="sd">        the paramters, ResetPlotParametersDefault() to reset them to default,</span>
+<span class="sd">        and PrintPlotParameters() to print out the current parameter values.</span>
+
+<span class="sd">    Tri : triangulation2D object</span>
+<span class="sd">        This object keeps track of the triangulation of the points. The methods</span>
+<span class="sd">        and attributes of triangulation2D are accessed through this object.</span>
+<span class="sd">        Most of the topological advection algorithm is done behind the scenes</span>
+<span class="sd">        using this object.</span>
+
+<span class="sd">    TriInit : triangulation2D object</span>
+<span class="sd">        A copy of Tri, which is kept in the initial state (i.e. not evolved</span>
+<span class="sd">        forward like Tri).  This is used as the basis triangulation for</span>
+<span class="sd">        initializing topological loops.</span>
+
+<span class="sd">    TriEvolved : bool</span>
+<span class="sd">        A flag that keeps track of the state of Tri. If True, then Tri has been</span>
+<span class="sd">        evolved forward, accumulated WeightOperators, and is a triangulation</span>
+<span class="sd">        of the points in the final time slice.</span>
+
+<span class="sd">    IsDelaunay : bool</span>
+<span class="sd">        A flag that keeps track of whether the triangulation Tri is currently</span>
+<span class="sd">        Delaunay or not.  This is used to inform plotting options.</span>
+
+<span class="sd">    TopologicalEntropy : list of 2 floats</span>
+<span class="sd">        This stores the topological entropy of the trajectory set and the</span>
+<span class="sd">        error in fitting the log weights to a straight line. [TopEnt, Err]</span>
+<span class="sd">        This is None until method GetTopologicalEntropy is run.</span>
+
+<span class="sd">    TotalWeightOverTime : list of ints</span>
+<span class="sd">        This records the total weight of a loop initialized in the mesh</span>
+<span class="sd">        configuration at each time slice.  This data is used to get the</span>
+<span class="sd">        topological entropy, and is saved if this level of specificity is</span>
+<span class="sd">        needed.</span>
+
+<span class="sd">    LoopData : LoopData object</span>
+<span class="sd">        This object consists of three attributes: LoopInitial, LoopFinal, and</span>
+<span class="sd">        LoopEvolved.  The first two are Loop objects from the module TA, which</span>
+<span class="sd">        represent a topological loop with TriInit as a basis, and a copy of</span>
+<span class="sd">        this loop that will be evolved forward.  LoopEvolved is a bool which</span>
+<span class="sd">        indicates whether LoopFinal has been evolved forward yet.</span>
+
+<span class="sd">    CurveSet : CurveSet object</span>
+<span class="sd">        This object stores representations of geometric curves and has methods</span>
+<span class="sd">        for generating them.  These geometric curves can then be used to</span>
+<span class="sd">        initialize a topological loop.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    For periodic boundary conditions (PeriodicBC is True), all particle</span>
+<span class="sd">    positions must have non-negative x and y values.  That is, the lower left</span>
+<span class="sd">    corner of the fundamental domain is the origin by convention.  You can</span>
+<span class="sd">    always shift your data to fit this convention.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    EvolveTri(Delaunay=False)</span>
+<span class="sd">        Evolve Tri forward to the final time</span>
+
+<span class="sd">    GetTopologicalEntropy(frac_start=0.0, ss_indices=None)</span>
+<span class="sd">        Find the topological entropy of the trajectory set</span>
+
+<span class="sd">    ClearCurves()</span>
+<span class="sd">        Reset the CurveSet object to have no curves.</span>
+
+<span class="sd">    InitializeLoopWithCurves()</span>
+<span class="sd">        Initialize a topological loop with the current set of curves.</span>
+
+<span class="sd">    EvolveLoop()</span>
+<span class="sd">        Evolve the current loop forward to the final time.</span>
+
+<span class="sd">    SetPlotParameters(**kwargs)</span>
+<span class="sd">        Set any of the PlotParameter attributes.</span>
+
+<span class="sd">    ResetPlotParametersDefault()</span>
+<span class="sd">        Reset the Plotting Parameters to the default values.</span>
+
+<span class="sd">    PrintPlotParameters()</span>
+<span class="sd">        Print out the current values of the plotting parameters.</span>
+
+<span class="sd">    Plot(PlotLoop=True, Initial=False)</span>
+<span class="sd">        Plot the triangulation and/or loop.</span>
+
+<span class="sd">    MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder=&quot;MovieImages/&quot;,</span>
+<span class="sd">                 ImageName=&quot;EvolvingLoop&quot;, filetype=&quot;.png&quot;)</span>
+<span class="sd">        Generate a sequence of plots to be used in creating a movie.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">TrajectorySlices</span><span class="p">,</span> <span class="n">Times</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Domain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">PeriodicBC</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Topological Advection object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        TrajectorySlices : list of lists</span>
+<span class="sd">            The time-slices which represent the set of point positions over</span>
+<span class="sd">            time. The first index indexes the time slice, and len(Tslices) =</span>
+<span class="sd">            len(Times).  The second index indexes the particle id (particle</span>
+<span class="sd">            ids are implicit, and a given particle will always have its data</span>
+<span class="sd">            in the same position in any time slice). So len(Tslices[t]) =</span>
+<span class="sd">            number of particles (for any t &lt; len(Times)). The third index</span>
+<span class="sd">            indexes the x/y direction choice. So, Tslices[t][p][0] gives the</span>
+<span class="sd">            x position of the pth particle at time slice t, while</span>
+<span class="sd">            Tslices[t][p][1] gives the y position.</span>
+
+<span class="sd">        Times : list of floats</span>
+<span class="sd">            The times at which the time slices were taken. These are needed to</span>
+<span class="sd">            give quantitative meaning to the Topological Entropy (per unit</span>
+<span class="sd">            time). Must have len(Times) = len(Tslices). If no Times list is</span>
+<span class="sd">            passed on initialization, a simple list with equal increments of 1</span>
+<span class="sd">            is generated. The default is None.</span>
+
+<span class="sd">        Domain : list of lists</span>
+<span class="sd">            This is the rectangular bounding domain for the trajectories. It</span>
+<span class="sd">            has the format [[x_min, y_min], [x_max, y_max]].  In the case of</span>
+<span class="sd">            periodic boundary conditions (PeriodicBC is True), x_min and y_min</span>
+<span class="sd">            must be 0. If no domain is passed on initialization (the default),</span>
+<span class="sd">            one will be generated based on the max and min x/y positions of</span>
+<span class="sd">            the particles (not ideal for periodic boundary case). The default</span>
+<span class="sd">            is None.</span>
+
+<span class="sd">        PeriodicBC : bool</span>
+<span class="sd">            Does the data live on a doubly periodic domain/torus (PeriodicBC is</span>
+<span class="sd">            True), or does it live on a bounded piece of the plane (PeriodicBC</span>
+<span class="sd">            is False - default)? This flag determines which module is used:</span>
+<span class="sd">            (top_advec_bnd.py or top_advec_pbc.py). The default is False.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span> <span class="o">=</span> <span class="n">TrajectorySlices</span>
+        <span class="k">if</span> <span class="n">Times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Times</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Times</span> <span class="o">=</span> <span class="n">Times</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Times</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span> <span class="o">=</span> <span class="n">Domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span> <span class="o">=</span> <span class="n">PeriodicBC</span>
+        <span class="c1">#  use the appropriate module based on periodic BC or regular</span>
+        <span class="k">if</span> <span class="n">PeriodicBC</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">TA</span> <span class="o">=</span> <span class="n">top_advec_pbc</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">TA</span> <span class="o">=</span> <span class="n">top_advec_bnd</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">PeriodicBC</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Trajectories live on a doubly periodic domain,&quot;</span>
+                      <span class="s2">&quot; but no fundamental domain boundary was specifed. </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Generating a fundamental domain based on max x and&quot;</span>
+                      <span class="s2">&quot; y values of the particle trajectories.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span> <span class="o">=</span> <span class="n">HF</span><span class="o">.</span><span class="n">GetBoundingDomainTraj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">,</span>
+                                                   <span class="n">PeriodicBC</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">(</span><span class="n">Bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="c1">#  now initialize a triangulation object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Triangulation2D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">PeriodicBC</span><span class="p">:</span>
+            <span class="n">ExBnd</span> <span class="o">=</span> <span class="n">HF</span><span class="o">.</span><span class="n">GetBoundingDomainSlice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">pointpos</span><span class="p">,</span> <span class="n">frac</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">ExBnd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">pointpos</span><span class="p">))</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">ExBnd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">pointpos</span><span class="p">))</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span>
+            <span class="n">ExBnd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">dz</span>
+            <span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dz</span>
+            <span class="n">ExBnd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">dz</span>
+            <span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dz</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;ExpandedBounds&quot;</span><span class="p">,</span> <span class="n">ExBnd</span><span class="p">)</span>
+        <span class="c1">#  and make a copy of it to do initial loop evaluations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">TriCopy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TopologicalEntropy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TotalWeightOverTime</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span> <span class="o">=</span> <span class="n">CurveSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TopologicalAdvection.EvolveTri">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.EvolveTri">[docs]</a>
+    <span class="k">def</span> <span class="nf">EvolveTri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Delaunay</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve Tri forward to the final time slice.</span>
+
+<span class="sd">        This takes Tri (resetting it to be a copy of TriInit if already</span>
+<span class="sd">        evolved), and evolves it forward using the time slices to the final</span>
+<span class="sd">        time.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Delaunay : bool</span>
+<span class="sd">            If True then extra triangulation flips will be used to force the</span>
+<span class="sd">            triangulation to be Delaunay after each time step.</span>
+<span class="sd">            The default is False.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ResetTri</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
+            <span class="n">HF</span><span class="o">.</span><span class="n">progressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="o">=</span> <span class="n">Delaunay</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_ResetTri</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">TriCopy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="TopologicalAdvection.GetTopologicalEntropy">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.GetTopologicalEntropy">[docs]</a>
+    <span class="k">def</span> <span class="nf">GetTopologicalEntropy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frac_start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ss_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the topological entropy of the trajectory set.</span>
+
+<span class="sd">        This evolves Tri forward to the final time slice (if not already</span>
+<span class="sd">        evolved), creates a mesh initialized loop, operates on this loop with</span>
+<span class="sd">        the accumulated weight operators and gets the total weights at each</span>
+<span class="sd">        time step, then finds the best fit of log weights vs. time to a line,</span>
+<span class="sd">        the slope of which is the topological entropy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        frac_start : float</span>
+<span class="sd">            The fraction of the total time to start the fitting at (must be</span>
+<span class="sd">            between 0 and 1). The weights can sometimes have initial transitory</span>
+<span class="sd">            behavior before exponentially increasing, and we can change</span>
+<span class="sd">            frac_start to exclude this from the fit. The default is 0.0.</span>
+
+<span class="sd">        ss_indices : list of 2 int</span>
+<span class="sd">            The start and stop indices for the fitting. The default is None. If</span>
+<span class="sd">            provied ss_indices over-ride the start and stop indices calculated</span>
+<span class="sd">            with frac_start.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        TE : float</span>
+<span class="sd">            The topological entropy estimate</span>
+<span class="sd">        TE_err : float</span>
+<span class="sd">            The error from the linear best fit</span>
+<span class="sd">        WeightsM : list of ints</span>
+<span class="sd">            The list of total weight at each time slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveTri</span><span class="p">()</span>
+        <span class="n">loopM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">WeightsM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">OperatorAction</span><span class="p">(</span><span class="n">loopM</span><span class="p">,</span> <span class="n">num_times</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
+        <span class="n">LogWeightsM</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">WeightsM</span><span class="p">]</span>
+        <span class="n">iend</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">LogWeightsM</span><span class="p">)</span>
+        <span class="n">istart</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">iend</span><span class="o">*</span><span class="n">frac_start</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ss_indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">istart</span><span class="p">,</span> <span class="n">iend</span> <span class="o">=</span> <span class="n">ss_indices</span>
+        <span class="n">TE</span><span class="p">,</span> <span class="n">TE_err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_GetSlopeFit</span><span class="p">(</span><span class="n">LogWeightsM</span><span class="p">,</span> <span class="n">istart</span><span class="p">,</span> <span class="n">iend</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TopologicalEntropy</span> <span class="o">=</span> <span class="p">[</span><span class="n">TE</span><span class="p">,</span> <span class="n">TE_err</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TotalWeightOverTime</span> <span class="o">=</span> <span class="n">WeightsM</span>
+        <span class="k">return</span> <span class="n">TE</span><span class="p">,</span> <span class="n">TE_err</span><span class="p">,</span> <span class="n">WeightsM</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_GetSlopeFit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LWeightsIn</span><span class="p">,</span> <span class="n">istart</span><span class="p">,</span> <span class="n">iend</span><span class="p">):</span>
+        <span class="c1"># fit LWeightsIn to a straight line and return slope and fitting error</span>
+        <span class="k">def</span> <span class="nf">linear_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">a</span><span class="o">*</span><span class="n">x</span><span class="o">+</span><span class="n">b</span>
+        <span class="c1">#  fitting to a linear function ax+b</span>
+        <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">linear_func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Times</span><span class="p">[</span><span class="n">istart</span><span class="p">:</span><span class="n">iend</span><span class="p">],</span>
+                               <span class="n">LWeightsIn</span><span class="p">[</span><span class="n">istart</span><span class="p">:</span><span class="n">iend</span><span class="p">])</span>
+        <span class="n">perr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">pcov</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">popt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">perr</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">_ClearLoopData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="TopologicalAdvection.ClearCurves">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.ClearCurves">[docs]</a>
+    <span class="k">def</span> <span class="nf">ClearCurves</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the CurveSet object to have no curves.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">ClearCurves</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.InitializeLoopWithCurves">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.InitializeLoopWithCurves">[docs]</a>
+    <span class="k">def</span> <span class="nf">InitializeLoopWithCurves</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a topological loop with the current set of curves.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ClearLoopData</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="p">,</span>
+                                <span class="n">curves</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="o">=</span> <span class="n">_LoopData</span><span class="p">(</span><span class="n">topadvec_in</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopInitial</span><span class="o">=</span><span class="n">loop</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.EvolveLoop">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.EvolveLoop">[docs]</a>
+    <span class="k">def</span> <span class="nf">EvolveLoop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve the current loop forward to the final time.</span>
+
+<span class="sd">        This takes LoopData.LoopFinal (the final loop object in the LoopData</span>
+<span class="sd">        attribute) and evolves it forward to the final time slice using the</span>
+<span class="sd">        accumulated WeightOperators in Tri (if it has not already been evolved</span>
+<span class="sd">        forward).  Before this, Tri is evolved forward if not already done.</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveTri</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopEvolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">OperatorAction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">,</span> <span class="n">option</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopEvolved</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.SetPlotParameters">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.SetPlotParameters">[docs]</a>
+    <span class="k">def</span> <span class="nf">SetPlotParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set any of the PlotParameter attributes.</span>
+
+<span class="sd">        Use the key, value pair to specify the parameters which determine what</span>
+<span class="sd">        to plot and how it should look.  As an example, if you want to change</span>
+<span class="sd">        the point markersize to 3, not plot the triangulation, and set the</span>
+<span class="sd">        train-tracks color to green, then use:</span>
+<span class="sd">        SetPlotParameters(markersize = 3, triplot = True, linecolor_tt = &#39;g&#39;)</span>
+<span class="sd">        The parameter values persist until explicitly changed or reset to the</span>
+<span class="sd">        default values.  See PlotParameters documentation for all the options.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        **kwargs :</span>
+<span class="sd">            key, value pairs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.ResetPlotParametersDefault">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.ResetPlotParametersDefault">[docs]</a>
+    <span class="k">def</span> <span class="nf">ResetPlotParametersDefault</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the Plotting Parameters to the default values.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">(</span><span class="n">Bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.PrintPlotParameters">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.PrintPlotParameters">[docs]</a>
+    <span class="k">def</span> <span class="nf">PrintPlotParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print out the current values of the plotting parameters.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;conversion_factor&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;max_weight&quot;</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.Plot">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.Plot">[docs]</a>
+    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">PlotLoop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">Initial</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the triangulation and/or loop.</span>
+
+<span class="sd">        Before calling this method, set the desired plotting parameters using</span>
+<span class="sd">        SetPlotParameters method.  This call</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        PlotLoop : bool</span>
+<span class="sd">            Flag - If True, the loop stored in LoopData is plotted, if</span>
+<span class="sd">            False, the loop is not plotted. The default is True.</span>
+
+<span class="sd">        Initial : bool</span>
+<span class="sd">            Flag - If True, the initial state is plotted (initial</span>
+<span class="sd">            triangulation in TriInit, and initial loop in LoopData.LoopInitial)</span>
+<span class="sd">            If False (default), the final state is plotted (final triangulation</span>
+<span class="sd">            is Tri, and final loop in LoopData.LoopFinal).  The triangulation</span>
+<span class="sd">            and/or Loop will be evolved forward if needed.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;Delaunay&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">PlotLoop</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="o">.</span><span class="n">Shear</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="p">,</span>
+                                          <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">EvolveLoop</span><span class="p">()</span>  <span class="c1"># does nothing if already evolved</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">,</span>
+                                      <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Currently don&#39;t support plotting loops&quot;</span>
+                          <span class="s2">&quot; represented with shear coordinates&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Need to create a loop&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TopologicalAdvection.MovieFigures">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.MovieFigures">[docs]</a>
+    <span class="k">def</span> <span class="nf">MovieFigures</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">PlotLoop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">Delaunay</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                     <span class="n">ImageFolder</span><span class="o">=</span><span class="s2">&quot;MovieImages/&quot;</span><span class="p">,</span> <span class="n">ImageName</span><span class="o">=</span><span class="s2">&quot;EvolvingLoop&quot;</span><span class="p">,</span>
+                     <span class="n">filetype</span><span class="o">=</span><span class="s2">&quot;.png&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a sequence of plots to be used in creating a movie.</span>
+
+<span class="sd">        This creates one figure for each of the time slices (sequentially</span>
+<span class="sd">        named). Use PlotParameters to set the plotting attributes before</span>
+<span class="sd">        calling this method. A folder is automatically created (if it doesn&#39;t</span>
+<span class="sd">        already exist) in the current directory to store the figures. One can</span>
+<span class="sd">        then use ffmpeg (or your favorite video editing software) to create a</span>
+<span class="sd">        movie from the images. An example ffmpeg command to do this:</span>
+<span class="sd">        ffmpeg -r 24 -pattern_type glob -i &#39;*.png&#39;  -vcodec libx264 -crf 25</span>
+<span class="sd">        -pix_fmt yuv420p AdvectingLoop.mp4</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        PlotLoop : bool</span>
+<span class="sd">            Flag - If True (default), the loop is plotted. If False, the loop</span>
+<span class="sd">            is not included in the plot.</span>
+
+<span class="sd">        Delaunay : bool</span>
+<span class="sd">            Flag - If True (default), the triangulation is forced to be</span>
+<span class="sd">            Delaunay after each evolution step. If False, only collapse events</span>
+<span class="sd">            are used for the triangulation evolution.</span>
+
+<span class="sd">        ImageFolder : str</span>
+<span class="sd">            Name of the folder to put the images in.</span>
+<span class="sd">            The default is &quot;MovieImages/&quot;.</span>
+
+<span class="sd">        ImageName : str</span>
+<span class="sd">            The start of the image file names. The default is &quot;EvolvingLoop&quot;.</span>
+<span class="sd">            The sequence of image files will be destinguished with a trailing</span>
+<span class="sd">            integer converted to str.  Ex.: EvolvingLoop0042.png</span>
+
+<span class="sd">        filetype : str</span>
+<span class="sd">            The type of file to save the image as. The default is &quot;.png&quot;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">ImageFolder</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">ImageFolder</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;Delaunay&quot;</span><span class="p">,</span> <span class="n">Delaunay</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">PlotLoop</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ResetTri</span><span class="p">()</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="o">.</span><span class="n">LoopCopy</span><span class="p">()</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">ImageFolder</span> <span class="o">+</span> <span class="n">ImageName</span> <span class="o">+</span> <span class="n">HF</span><span class="o">.</span><span class="n">CounterToStr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">filetype</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="n">loop</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="n">startind</span><span class="p">,</span> <span class="n">stopind</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
+                <span class="n">startind</span> <span class="o">=</span> <span class="n">stopind</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">HF</span><span class="o">.</span><span class="n">progressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+                <span class="n">stopind</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">WeightOperatorList</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">OperatorAction</span><span class="p">(</span><span class="n">loop</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="n">startind</span><span class="p">,</span> <span class="n">stopind</span><span class="p">],</span>
+                                        <span class="n">option</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">ImageFolder</span> <span class="o">+</span> <span class="n">ImageName</span> <span class="o">+</span> <span class="n">HF</span><span class="o">.</span><span class="n">CounterToStr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="n">filetype</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="n">loop</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="o">=</span> <span class="n">Delaunay</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">PlotLoop</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Need to create an initial loop first&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ResetTri</span><span class="p">()</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">ImageFolder</span> <span class="o">+</span> <span class="n">ImageName</span> <span class="o">+</span> <span class="n">HF</span><span class="o">.</span><span class="n">CounterToStr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">filetype</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
+                <span class="n">HF</span><span class="o">.</span><span class="n">progressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">ImageFolder</span> <span class="o">+</span> <span class="n">ImageName</span> <span class="o">+</span> <span class="n">HF</span><span class="o">.</span><span class="n">CounterToStr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="n">filetype</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="o">=</span> <span class="n">Delaunay</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="k">class</span> <span class="nc">_LoopData</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topadvec_in</span><span class="p">,</span> <span class="n">LoopInitial</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoopInitial</span><span class="p">:</span> <span class="n">topadvec_in</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Loop</span> <span class="o">=</span> <span class="n">LoopInitial</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">:</span> <span class="n">topadvec_in</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Loop</span> <span class="o">=</span> <span class="n">LoopInitial</span><span class="o">.</span><span class="n">LoopCopy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">LoopEvolved</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="CurveSet">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet">[docs]</a>
+<span class="k">class</span> <span class="nc">CurveSet</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate and store a set of geometric curves.</span>
+
+<span class="sd">    Geometric curves are used to initialize topological loops in</span>
+<span class="sd">    TopologicalAdvection objects.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Domain : list of lists</span>
+<span class="sd">        This is the rectangular bounding domain for the trajectories.  It has</span>
+<span class="sd">        the format [[x_min, y_min], [x_max, y_max]].</span>
+
+<span class="sd">    PeriodicBC : bool</span>
+<span class="sd">        Does the data live on a doubly periodic domain/torus (PeriodicBC is</span>
+<span class="sd">        True), or does it live on a bounded piece of the plane (PeriodicBC is</span>
+<span class="sd">        False)?</span>
+
+<span class="sd">    curves : list</span>
+<span class="sd">        Each element in the list represents a curve, and consists of four</span>
+<span class="sd">        items: the list of point positions [[x_0,y_0],[x_1,y_1],...],</span>
+<span class="sd">        whether the curve is closed (bool), whether the end points are</span>
+<span class="sd">        pinned [bool,bool], and finally, the weight to add to the loop</span>
+<span class="sd">        weightlist.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    ClearCurves()</span>
+<span class="sd">        Reset the curves to be an empty list.</span>
+
+<span class="sd">    AddCircle(center, radius, NumPoints=100)</span>
+<span class="sd">        Add a circle to the curves list.</span>
+
+<span class="sd">    AddEllipse(center, a, b, phi=0, NumPoints=100)</span>
+<span class="sd">        Add an ellipse to the curves list.</span>
+
+<span class="sd">    AddRectangle(center, w, h, phi=0)</span>
+<span class="sd">        Add a rectangle to the curves list.</span>
+
+<span class="sd">    AddSquare(center, L, phi=0)</span>
+<span class="sd">        Add a square to the curves list.</span>
+
+<span class="sd">    AddVerticalLine(x_val)</span>
+<span class="sd">        Add a vertical line to the curves list.</span>
+
+<span class="sd">    AddHorizontalLine(y_val)</span>
+<span class="sd">        Add a horizontal line to the curves list.</span>
+
+<span class="sd">    AddLineSegment(pt1, pt2)</span>
+<span class="sd">        Add a line segment to the curves list.</span>
+
+<span class="sd">    AddOpenCurve(points)</span>
+<span class="sd">        Add a custom curve with open ends to the curves list.</span>
+
+<span class="sd">    AddClosedCurve(points)</span>
+<span class="sd">        Add a custom closed curve to the curves list.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    All the points in a generated curve must be inside the domain. If not,</span>
+<span class="sd">    then the curve is not added to the curve list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Domain</span><span class="p">,</span> <span class="n">PeriodicBC</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span> <span class="o">=</span> <span class="n">Domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span> <span class="o">=</span> <span class="n">PeriodicBC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="CurveSet.ClearCurves">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.ClearCurves">[docs]</a>
+    <span class="k">def</span> <span class="nf">ClearCurves</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the curves to be an empty list.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddCircle">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddCircle">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddCircle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">NumPoints</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a circle to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        center : list of 2 floats</span>
+<span class="sd">            The [x,y] location of the center of the circle</span>
+<span class="sd">        radius : float</span>
+<span class="sd">            Circle radius.</span>
+<span class="sd">        NumPoints : int</span>
+<span class="sd">            The number of points to use in approximating the curve.</span>
+<span class="sd">            The default is 100.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddEllipse</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">NumPoints</span><span class="o">=</span><span class="n">NumPoints</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddEllipse">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddEllipse">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddEllipse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">NumPoints</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add an ellipse to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        center : list of 2 floats</span>
+<span class="sd">            The [x,y] location of the center of the ellipse.</span>
+<span class="sd">        a : float</span>
+<span class="sd">            Semi-major axis</span>
+<span class="sd">        b : float</span>
+<span class="sd">            Semi-minor axis</span>
+<span class="sd">        phi : float</span>
+<span class="sd">            Angle (in radians) that the semi-major axis makes with the</span>
+<span class="sd">            horizontal. The default is 0.</span>
+<span class="sd">        NumPoints : int</span>
+<span class="sd">            The number of points to use in approximating the curve.</span>
+<span class="sd">            The default is 100.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">NumPoints</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+                           <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span>
+                           <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+                           <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddClosedCurve</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddRectangle">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddRectangle">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddRectangle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a rectangle to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        center : list of 2 floats</span>
+<span class="sd">            The [x,y] location of the center of the rectangle.</span>
+<span class="sd">        w : float</span>
+<span class="sd">            Width</span>
+<span class="sd">        h : float</span>
+<span class="sd">            Height</span>
+<span class="sd">        phi : float</span>
+<span class="sd">            Angle (in radians) that the rectangle width axis makes with the</span>
+<span class="sd">            horizontal. The default is 0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="o">-</span><span class="n">w</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">h</span><span class="o">/</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">w</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">h</span><span class="o">/</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="n">w</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">h</span><span class="o">/</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="n">w</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">h</span><span class="o">/</span><span class="mi">2</span><span class="p">]])</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+                           <span class="o">-</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span>
+                          <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+                          <span class="o">+</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddClosedCurve</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddSquare">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddSquare">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddSquare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a square to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        center : list of 2 floats</span>
+<span class="sd">            The [x,y] location of the center of the square.</span>
+<span class="sd">        L : float</span>
+<span class="sd">            Side length</span>
+<span class="sd">        phi : float</span>
+<span class="sd">            Angle (in radians) that the square is rotated by.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddRectangle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddVerticalLine">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddVerticalLine">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddVerticalLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a vertical line to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x_val : float</span>
+<span class="sd">            The x position of the vertical line.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        If the domain is periodic, this is a closed curve about one of the</span>
+<span class="sd">        torus fundamental directions.  If not, the topological loop generated</span>
+<span class="sd">        from this geometric curve will have ends that wrap around the</span>
+<span class="sd">        nearest boundary control points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x_val</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">x_val</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Curve is not contained in the domain &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x_val</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">delta</span><span class="p">],</span>
+                      <span class="p">[</span><span class="n">x_val</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">delta</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span> <span class="mf">0.5</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddHorizontalLine">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddHorizontalLine">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddHorizontalLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a horizontal line to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y_val : float</span>
+<span class="sd">            The y position of the horizontal line.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        If the domain is periodic, this is a closed curve about one of the</span>
+<span class="sd">        torus fundamental directions.  If not, the topological loop generated</span>
+<span class="sd">        from this geometric curve will have ends that wrap around the</span>
+<span class="sd">        nearest boundary control points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">y_val</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">y_val</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Curve is not contained in the domain &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">delta</span><span class="p">,</span> <span class="n">y_val</span><span class="p">],</span>
+                      <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">delta</span><span class="p">,</span> <span class="n">y_val</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span> <span class="mf">0.5</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddLineSegment">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddLineSegment">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddLineSegment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pt1</span><span class="p">,</span> <span class="n">pt2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a line segment going from pt1 to pt2 to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pt1 : list of 2 floats</span>
+<span class="sd">            End position, [x,y], of the line segment.</span>
+<span class="sd">        pt2 : list of 2 floats</span>
+<span class="sd">            Other end position, [x,y], of the line segment.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        The topological loop initialized with this geometric line segment will</span>
+<span class="sd">        wrap around the nearest point to each end of the segment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">pt1</span><span class="p">,</span> <span class="n">pt2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddOpenCurve</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddOpenCurve">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddOpenCurve">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddOpenCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a custom curve with open ends to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        points : list of lists</span>
+<span class="sd">            List of sequential points ([x_1, y_1], [x_2, y_2], ...) defining</span>
+<span class="sd">            a curve.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        This is an &#39;open&#39; curve, meaning the last and first points are not</span>
+<span class="sd">        meant to be connected. The topological loop initialized with this</span>
+<span class="sd">        geometric curve will wrap around the nearest trajectory points to each</span>
+<span class="sd">        end of the curve.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ContainedInDomain</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">points</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Curve is not contained in the domain &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span> <span class="mf">0.5</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="CurveSet.AddClosedCurve">
+<a class="viewcode-back" href="../topological_advection.html#topological_advection.CurveSet.AddClosedCurve">[docs]</a>
+    <span class="k">def</span> <span class="nf">AddClosedCurve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a custom closed curve to the curves list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        points : list of lists</span>
+<span class="sd">            List of sequential points ([x_1, y_1], [x_2, y_2], ...) defining</span>
+<span class="sd">            a curve. Any cyclic shift of this list is equivalent.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        This is a &#39;closed&#39; curve, meaning the last and first points are</span>
+<span class="sd">        connected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ContainedInDomain</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">points</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Curve is not contained in the domain &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Curves</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">])</span></div>
+
+            <span class="c1">#  point_set, is_closed, end_pts_pin, wadd</span>
+
+    <span class="k">def</span> <span class="nf">_ContainedInDomain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">):</span>
+        <span class="n">x_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">x_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">y_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">y_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">x_max</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">x_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="n">y_max</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">y_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Spencer A. Smith.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
