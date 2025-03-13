@@ -1,4 +1,4 @@
-# TopologicalAdvection
+# Topological Advection
 Represent curves on a 2D surface up to topological equivalence and evolve (advect) these curves forward in time due to the movement of points in a flow.
 
 ## Fluid Dynamics Motivation
@@ -15,3 +15,10 @@ In [examples](examples/), you will find two python notebooks. One deals with tra
 
 ## Cite / Background Reading
 A paper to cite will be coming shortly.  For now, use: Spencer A. Smith, **Topological Advection**, 2025. as a placeholder.
+
+
+
+https://github.com/user-attachments/assets/c61ff3c1-f57b-4941-9b59-f3ceca115a58
+
+
+
