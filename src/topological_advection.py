@@ -435,7 +435,7 @@ class TopologicalAdvection:
         """Plot the triangulation and/or loop.
 
         Before calling this method, set the desired plotting parameters using
-        SetPlotParameters method.  This call
+        SetPlotParameters method.
 
         Parameters
         ----------
