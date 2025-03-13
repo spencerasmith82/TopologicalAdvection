@@ -11,7 +11,7 @@ Curves are encoded topologically as ‘loops’ with a triangulation of the poin
 For details on the modules, classes, methods, etc. that make up the topological advection algorithm, see the [Coding Documentation](https://spencerasmith82.github.io/TopologicalAdvection/).  A good starting place for most use cases is the top-level class topological_advection.py.
 
 ## Examples
-In [examples](https://github.com/spencerasmith82/TopologicalAdvection/tree/main/examples), you will find two python notebooks. One deals with trajectories that remain within a bounded region of the plane, while the other deals with trajectories that live on the torus (doubly periodic domain).  In both cases the notebooks cover the main ways to interact with the code: Creating triangulations, evolving triangulations forward in time, initializing topological curves ('loops'), evolving loops forward in time, **calculating the topological entropy of a flow**, plotting the triangulation and loops, and creating images for a movie.
+In [examples](examples/), you will find two python notebooks. One deals with trajectories that remain within a bounded region of the plane, while the other deals with trajectories that live on the torus (doubly periodic domain).  In both cases the notebooks cover the main ways to interact with the code: Creating triangulations, evolving triangulations forward in time, initializing topological curves ('loops'), evolving loops forward in time, **calculating the topological entropy of a flow**, plotting the triangulation and loops, and creating images for a movie.
 
 ## Cite / Background Reading
 A paper to cite will be coming shortly.  For now, use: Spencer A. Smith, **Topological Advection**, 2025. as a placeholder.
