@@ -9,6 +9,7 @@ Curves are encoded topologically as ‘loops’ with a triangulation of the poin
 
 ## Documentation
 For details on the modules, classes, methods, etc. that make up the topological advection algorithm, see the [Coding Documentation](https://spencerasmith82.github.io/TopologicalAdvection/).  A good starting place for most use cases is the top-level class topological_advection.py.
+The code is completely in python (with python notebooks for examples), and uses vectorization (and numba jit) where appropriate for a speed boost.
 
 ## Examples
 In [examples](examples/), you will find two python notebooks. One deals with trajectories that remain within a bounded region of the plane, while the other deals with trajectories that live on the torus (doubly periodic domain).  In both cases the notebooks cover the main ways to interact with the code: Creating triangulations, evolving triangulations forward in time, initializing topological curves ('loops'), evolving loops forward in time, **calculating the topological entropy of a flow**, plotting the triangulation and loops, and creating images for a movie.
@@ -17,7 +18,8 @@ In [examples](examples/), you will find two python notebooks. One deals with tra
 A paper to cite will be coming shortly.  For now, use: Spencer A. Smith, **Topological Advection**, 2025. as a placeholder.
 
 
-
+## Appetizer
+In the following video, the advected particle trajectories are from a simulation of 2D forced turbulence.  The topological advection algorithm is then used to evolve forward an initial material line.  The material curve is that is plotted is a geometric representation of the underlying topological loop data.
 https://github.com/user-attachments/assets/c61ff3c1-f57b-4941-9b59-f3ceca115a58
 
 
