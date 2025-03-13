@@ -20,7 +20,6 @@ A paper to cite will be coming shortly.  For now, use: Spencer A. Smith, **Topol
 
 ## Appetizer
 In the following video, the advected particle trajectories are from a simulation of 2D forced turbulence.  The topological advection algorithm is then used to evolve forward an initial material line.  The material curve is that is plotted is a geometric representation of the underlying topological loop data.
+
 https://github.com/user-attachments/assets/c61ff3c1-f57b-4941-9b59-f3ceca115a58
-
-
 
