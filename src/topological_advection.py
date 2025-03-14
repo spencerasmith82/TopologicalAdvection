@@ -255,6 +255,7 @@ class TopologicalAdvection:
             ExBnd[1][0] += dz
             ExBnd[0][1] -= dz
             ExBnd[1][1] += dz
+            self._ExpandedBounds = ExBnd
             setattr(self.PlotParameters, "ExpandedBounds", ExBnd)
         #  and make a copy of it to do initial loop evaluations
         self.TriInit = self.Tri.TriCopy()
@@ -417,7 +418,8 @@ class TopologicalAdvection:
         None.
 
         """
-        self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
+        self.PlotParameters = self.TA.PlotParameters(
+            Bounds=self.Domain, ExpandedBounds=self._ExpandedBounds)
 
     def PrintPlotParameters(self):
         """Print out the current values of the plotting parameters.
