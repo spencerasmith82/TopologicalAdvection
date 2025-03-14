@@ -176,4 +176,5 @@ projects/
 tests/
 .tests/
 .DS_Store
-
+examples/MovieImages
+examples/AdvectingLoop.mp4
