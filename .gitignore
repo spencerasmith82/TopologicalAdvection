@@ -171,6 +171,9 @@ cython_debug/
 .pypirc
 
 #Local Files and Folders to ignore:
+projects/
 .projects/
+tests/
 .tests/
+
 
