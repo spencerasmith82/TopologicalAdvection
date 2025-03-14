@@ -223,6 +223,8 @@ class TopologicalAdvection:
 
         """
         self.Tslices = TrajectorySlices
+        if isinstance(self.Tslices, np.ndarray):
+            self.Tslices = self.Tslices.tolist()
         if Times is None:
             self.Times = [i for i in range(len(self.Tslices))]
         else:
@@ -418,8 +420,11 @@ class TopologicalAdvection:
         None.
 
         """
-        self.PlotParameters = self.TA.PlotParameters(
-            Bounds=self.Domain, ExpandedBounds=self._ExpandedBounds)
+        if self.PeriodicBC:
+            self.PlotParameters = self.TA.PlotParameters(Bounds=self.Domain)
+        else:
+            self.PlotParameters = self.TA.PlotParameters(
+                Bounds=self.Domain, ExpandedBounds=self._ExpandedBounds)
 
     def PrintPlotParameters(self):
         """Print out the current values of the plotting parameters.

@@ -84,22 +84,18 @@ for i in range(Ntot):
                      np.random.uniform(y_b+de, y_t-de)])
 
 # Now we run each inital condition through the ode solver
-Traj = []  # for the trajectories
-for IC in InitCond:
-    Traj.append(solve_ivp(fun=VelFunc, t_span=(T_i,T_f), y0=IC,
-                          method='Radau', t_eval=times, args=(params,)).y.T)
+Traj = np.array([solve_ivp(fun=VelFunc, t_span=(T_i,T_f), y0=IC,
+                    method='Radau', t_eval=times, args=(params,)).y.T for IC in InitCond])
 ```
 
 ### How to Structure Trajectory Data
 
-Now we can illustrate features of the topological advection algorithm with this trajectory set.  The very first thing to to is make sure that we have the correct data structure for the trajectories.  Currently Traj has the signature Traj[trajectory id][time][x/y], but we need to have it as time slices (time as the first index): Tslice[time][trajectory id][x/y].  So, let's reformat it:
+Now we can illustrate features of the topological advection algorithm with this trajectory set.  The very first thing to to is make sure that we have the correct data structure for the trajectories.  Currently Traj has the signature Traj[trajectory id][time][x/y], but we need to have it as time slices (time as the first index): Tslice[time][trajectory id][x/y].  So, let's reformat it.  Also note that the input to the algorithm is usually a list of lists, but can be a numpy array.
 
 
 ```python
 # converting a set of trajectories to a set of time-slices
-Tslices = []
-for t in range(len(times)):
-    Tslices.append([Traj[p][t].tolist() for p in range(len(Traj))])
+Tslices = Traj.transpose(1,0,2)  # just swapping the time and particle id number
 ```
 
 ### Topological Advection Object Initialization
@@ -146,7 +142,7 @@ TopAdvec.PrintPlotParameters()
     triplot: True
     Delaunay: True
     DelaunayAdd: False
-    Bounds: [[np.float64(-0.24315996186691272), np.float64(-1.2845285522189833)], [np.float64(6.25761744064132), np.float64(1.2788024767810973)]]
+    Bounds: [[np.float64(-0.2541188960490385), np.float64(-1.2856526832198563)], [np.float64(6.260440517356644), np.float64(1.2856457131117405)]]
     FigureSizeX: 8
     dpi: 200
     ptlabels: False
@@ -161,10 +157,10 @@ TopAdvec.PrintPlotParameters()
     alpha_tt: 1.0
     frac: 0.9
     tt_lw_min_frac: 0.05
-    _conversion_factor: 0.01128607187935457
+    _conversion_factor: 0.011309998981607087
     _max_weight: None
     boundary_points: False
-    ExpandedBounds: [[np.float64(-0.5591470835137603), np.float64(-1.6059434665369825)], [np.float64(6.573604562288168), np.float64(1.6002173910990962)]]
+    ExpandedBounds: [[np.float64(-0.5709352245502285), np.float64(-1.608066621771345)], [np.float64(6.577256845857834), np.float64(1.6080596516632293)]]
 
 
 ### Modifying Plotting Parameters
@@ -207,7 +203,7 @@ print("The Topological Entropy is ", TE, " +/- ", TE_err)
 # Triangulation evolution will take.
 ```
 
-    The Topological Entropy is  1.0357826489198314  +/-  0.005446441218413045===========================-] 99.0% ...
+    The Topological Entropy is  1.0042383528011265  +/-  0.006739992642712131===========================-] 99.0% ...
 
 
 Note that the topological entropy is given in units of inverse time (which is set by your units for the time array).
@@ -429,9 +425,9 @@ TopAdvec.MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder="MovieImages/",
 
 Now to create the movie from the images, you can run ffmpeg with the following setup in your terminal:
 
-ffmpeg -r 25 -i "MovieImages/EvolvingLoop%04d.png" -vcodec libx264 -crf 28 -pix_fmt yuv420p AdvectingLoop.mp4
+ffmpeg -r 25 -i "MovieImages/EvolvingLoop%04d.png" -vcodec libx264 -crf 28 -pix_fmt yuv420p Videos/AdvectingLoop.mp4
 
-This results in the following video:
 
-https://github.com/user-attachments/assets/b3c11bf7-ddb8-4f51-8618-4914a3ea0491
+```python
 
+```
