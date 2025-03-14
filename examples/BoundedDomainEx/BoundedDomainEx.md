@@ -428,6 +428,4 @@ Now to create the movie from the images, you can run ffmpeg with the following s
 ffmpeg -r 25 -i "MovieImages/EvolvingLoop%04d.png" -vcodec libx264 -crf 28 -pix_fmt yuv420p Videos/AdvectingLoop.mp4
 
 
-```python
-
-```
+https://github.com/user-attachments/assets/64007aa1-d55e-4479-b7ec-2443998b9451
