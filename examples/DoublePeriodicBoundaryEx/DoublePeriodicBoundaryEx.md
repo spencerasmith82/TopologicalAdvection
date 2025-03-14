@@ -440,3 +440,7 @@ TopAdvec.MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder="MovieImages/",
 Now to create the movie from the images, you can run ffmpeg with the following setup in your terminal (first create Videos/ folder):
 
 ffmpeg -r 25 -i "MovieImages/EvolvingLoop%04d.png" -vcodec libx264 -crf 28 -pix_fmt yuv420p Videos/AdvectingLoop2.mp4
+
+
+https://github.com/user-attachments/assets/69c978d7-34ce-4b4c-8852-31d08889f15c
+
