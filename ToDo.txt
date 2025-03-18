@@ -1,6 +1,3 @@
 
 * Continue to improve the TopologicalAdvection class (later perhaps add a finding coherent structures method)
 
-* flesh out the examples
-
-* create pdfs of the example notebooks for documentation.
