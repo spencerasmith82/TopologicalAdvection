@@ -177,6 +177,6 @@ tests/
 .tests/
 .DS_Store
 examples/MovieImages
-examples/MovieImages/
+.examples/MovieImages/
 examples/Videos
-examples/Videos/
+.examples/Videos/
