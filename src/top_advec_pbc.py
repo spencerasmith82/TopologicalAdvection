@@ -410,6 +410,7 @@ class Loop(Loop_Base):
         self.weightlist = [x/mwv for x in self.weightlist]
 
     def LoopCopy(self):
+        
         return copy.deepcopy(self)
 # End of Loop Class ##########################################################
 
@@ -772,16 +773,11 @@ class Triangulation2D(Triangulation2D_Base):
                     temppoints[i][0] -= shear_val
         #  create the initial Delaunay triangulation.  The option forces the
         #  creation of simplices for degenerate points by applying a random
-        #  perturbation.
+        #  perturbation. (QJ for perturbations)
         temptri = Delaunay(temppoints, qhull_options="QJ Pp")
-        #  the copy of the FD that each point in a triangle is in
-        ptcopypos = []
-        #  convention: 0 for FD, 1 BL, 2 BC, 3 BR, 4 MR, 5 TR, 6 TC, 7 TL, 8 ML
         #  the point in the FD that each point in a triangle maps to
         ptfdID = []
-        #  gives 1 if all 3 points are in the fundamental domain, 0 if at least
-        #  one point in in the FD, and -1 if they are all outside the FD
-        triloc, edgesimps, FDsimps = [], [], []
+        edgesimps, FDsimps = [], []
         for i in range(temptri.simplices.shape[0]):
             tempptlist = temptri.simplices[i].tolist()
             fdID, copypos = [], []
@@ -789,32 +785,29 @@ class Triangulation2D(Triangulation2D_Base):
                 fdID.append(tempptlist[j] % self._ptnum)
                 copypos.append(tempptlist[j]//self._ptnum)
             ptfdID.append(fdID)
-            ptcopypos.append(copypos)
             InFD = [copypos[k] == 0 for k in range(3)]
             if all(InFD):  # all points are in the FD
-                triloc.append(1)
                 FDsimps.append(i)
             elif any(InFD):  # one or two points in the FD
-                triloc.append(0)
                 edgesimps.append(i)
-            else:  # no points in the FD
-                triloc.append(-1)
+            # else:  # no points in the FD
+            #     # need to check for triangles that cross and edge but don't
+            #     # have a point in the FD
+            #     if not (copypos[0] == copypos[1] and copypos[1] == copypos[2]):
+            #         tri_temp = [temppoints[ptid] for ptid in tempptlist]
+            #         domain_temp = [[0, 0], self.FDsizes]
+            #         if HF.TriEdgeCrossBnd(tri_temp, domain_temp):
+            #             edgesimps.append(i)
+
         #  now we need to create a list of equivalent shifted triangles
         #  (only ones that straddle the FD edge are needed)
         Equiv_Tri = [[] for i in range(temptri.simplices.shape[0])]
         for i in range(len(edgesimps)-1):
+            ptidsi = ptfdID[edgesimps[i]]
             for j in range(i+1, len(edgesimps)):
-                ptidsi = temptri.simplices[edgesimps[i]]
-                triptsi = [np.array(temptri.points[x]) for x in ptidsi]
-                ptidsj = temptri.simplices[edgesimps[j]]
-                triptsj = [np.array(temptri.points[x]) for x in ptidsj]
+                ptidsj = ptfdID[edgesimps[j]]
                 for k in range(3):
-                    triptsj_roll = np.roll(triptsj, k, axis=0)
-                    vec = [triptsj_roll[m]-triptsi[m] for m in range(3)]
-                    diff_mag = 0
-                    for m in range(3):
-                        diff_mag += np.linalg.norm(vec[m]-vec[(m+1) % 3])
-                    if diff_mag < 0.000000001*self.FDsizes[0]:
+                    if all(ptidsi == np.roll(ptidsj, k, axis=0)):
                         #  if true, then the i and j triangles map to the same
                         #  points in the FD and they are the same triangle
                         Equiv_Tri[edgesimps[i]].append([edgesimps[j], k])

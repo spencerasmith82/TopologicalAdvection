@@ -75,6 +75,22 @@ def GetBoundingDomainTraj(Tslices, PeriodicBC=False, frac=None):
         return BD
 
 
+def TriEdgeCrossBnd(triangle, boundary):
+    """Do the triangle edges crosse one of the domain boundaries."""
+    BoundaryPoints = [[boundary[0][0], boundary[0][1]],
+                      [boundary[1][0], boundary[0][1]],
+                      [boundary[1][0], boundary[1][1]],
+                      [boundary[0][0], boundary[1][1]]]
+    for i in range(3):
+        Line1 = [triangle[i], triangle[(i+1) % 3]]
+        for j in range(len(BoundaryPoints)):
+            Line2 = [BoundaryPoints[j],
+                     BoundaryPoints[(j+1) % len(BoundaryPoints)]]
+            if IsIntersection(Line1, Line2):
+                return True
+    return False
+
+
 def CounterToStr(countin):
     """Return a str version of the input int (with consistent padding)."""
     if countin < 10:
