@@ -12,7 +12,7 @@ For details on the modules, classes, methods, etc. that make up the topological 
 The code is completely in python (with python notebooks for examples), and uses vectorization (and numba jit) where appropriate for a speed boost.
 
 ## Examples
-In [examples](examples/), you will find two python notebooks. One ([documentation for this example](examples/BoundedDomainEx/BoundedDomainEx.md)) deals with trajectories that remain within a bounded region of the plane, while the other ([documentation for this example](examples/DoublePeriodicBoundaryEx/DoublePeriodicBoundaryEx.md)) deals with trajectories that live on the torus (doubly periodic domain).  In both cases the notebooks cover the main ways to interact with the code: Creating triangulations, evolving triangulations forward in time, initializing topological curves ('loops'), evolving loops forward in time, **calculating the topological entropy of a flow**, plotting the triangulation and loops, and creating images for a movie.
+There is documentation for three different use cases: One ([Lid-driven Cavity Flow](examples/BoundedDomainEx/BoundedDomainEx.md)) deals with trajectories that remain within a bounded region of the plane, another ([Unsteady Quadruple Gyre](examples/DoublePeriodicBoundaryEx/DoublePeriodicBoundaryEx.md)) deals with trajectories that live on the torus (doubly periodic domain), and a final one ([Bickley Jet](examples/SinglePeriodicBoundaryEx/SinglePeriodicBoundaryEx.md)) deals with trajectories on a singly periodic boundary (annulus).  You can find python notebooks for each case in [examples](examples/).  In all three cases, the notebooks cover the main ways to interact with the code: Creating triangulations, evolving triangulations forward in time, initializing topological curves ('loops'), evolving loops forward in time, **calculating the topological entropy of a flow**, plotting the triangulation and loops, and creating images for a movie.
 
 ## Cite / Background Reading
 A paper to cite will be coming shortly.  For now, use: Spencer A. Smith, **Topological Advection**, 2025. as a placeholder.
@@ -23,3 +23,5 @@ In the following video, the advected particle trajectories are from a simulation
 
 https://github.com/user-attachments/assets/c61ff3c1-f57b-4941-9b59-f3ceca115a58
 
+## Contact
+If you have any questions, or would like to let me know about how you are using this code, feel free to email me at: smith@mtholyoke.edu
