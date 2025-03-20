@@ -674,8 +674,8 @@ class Triangulation2D(Triangulation2D_Base):
         Deltax = (self.Domain[1][0] - self.Domain[0][0])
         Deltay = (self.Domain[1][1] - self.Domain[0][1])
         a_ratio = Deltax/Deltay
-        npts_x = int(np.sqrt(npts*a_ratio))
-        npts_y = int(npts/npts_x)
+        npts_x = max(int(np.sqrt(npts*a_ratio)), 6)
+        npts_y = max(int(npts/npts_x), 6)
         dx = Deltax/(npts_x-1)
         dy = Deltay/(npts_y-1)
         delta = 1e-6*min(dx, dy)

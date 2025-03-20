@@ -180,3 +180,5 @@ examples/MovieImages
 .examples/MovieImages/
 examples/Videos
 .examples/Videos/
+.performance/
+performance/

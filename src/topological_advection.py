@@ -268,7 +268,7 @@ class TopologicalAdvection:
         self.LoopData = None
         self.CurveSet = CurveSet(self.Domain, self.PeriodicBC)
 
-    def EvolveTri(self, Delaunay=False):
+    def EvolveTri(self, Delaunay=False, progress_bar=True):
         """Evolve Tri forward to the final time slice.
 
         This takes Tri (resetting it to be a copy of TriInit if already
@@ -282,15 +282,22 @@ class TopologicalAdvection:
             triangulation to be Delaunay after each time step.
             The default is False.
 
+        progress_bar
+            If True (default), a progress bar will be printed during evolution
+
         Returns
         -------
         None.
         """
         if self.TriEvolved:
             self._ResetTri()
-        for i in range(1, self._NumTimes):
-            HF.progressBar(i, self._NumTimes)
-            self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
+        if progress_bar:
+            for i in range(1, self._NumTimes):
+                HF.progressBar(i, self._NumTimes)
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
+        else:
+            for i in range(1, self._NumTimes):
+                self.Tri.Evolve(self.Tslices[i], Maintain_Delaunay=Delaunay)
         self.TriEvolved = True
         self.IsDelaunay = Delaunay
 
