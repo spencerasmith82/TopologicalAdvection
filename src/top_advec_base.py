@@ -615,18 +615,24 @@ class Triangulation2D_Base(ABC):
         """
         pass
 
-    def Plot(self, LoopIn=None, PP: PlotParameters = PlotParameters()):
+    def Plot(self, LoopIn=None, GCurvesIn=None,
+             PP: PlotParameters = PlotParameters()):
         """General Plotting function.
 
-        Plots the points, triangulation, and loops with a large variety
-        of options specified in PlotParameters (see the documentation for
-        PlotParameters data class for more details).
+        Plots the points, triangulation, loops, and geometric curves with a
+        large variety of options specified in PlotParameters (see the
+        documentation for PlotParameters data class for more details).
 
         Parameters
         ----------
         LoopIn : Loop object
             If a loop object is passed, then the train-track associated with
             this loop will be included in the plot. Default is None.
+
+        GCurvesIn : List of curves
+            If GCurvesIn is given, then the geometric curves will be plotted.
+            curves data is same as used in loop initialization in child
+            classes.  Default is None.
 
         PP : PlotParameters data object
             All of the options for customizing the plot are wrapped up in
@@ -648,6 +654,9 @@ class Triangulation2D_Base(ABC):
             self._TriangulationPlotBase(ax, PP)
         #  the points
         self._PointPlotBase(ax, PP)
+        #  only plot a geometric curve if it is given
+        if GCurvesIn is not None:
+            self._GeoPlotBase(ax, GCurvesIn, PP)
         #  only plot the traintrack if a Loop is given
         if LoopIn is not None:
             self._TTPlotBase(ax, LoopIn, PP)
@@ -723,7 +732,25 @@ class Triangulation2D_Base(ABC):
             The data in LoopIn determine the train-track
 
         PP : PlotParameters object
-            For this method, the relevant PlotParameters attributes are:
+        """
+        pass
+
+    @abstractmethod
+    def _GeoPlotBase(self, ax, GCurveIn, PP: PlotParameters):
+        """Plot the geometric curve.
+
+        Plots the given geometric curve
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        GCurveIn : List
+            Geometric Curve; data is same as used in loop initialization in
+            child classes.
+
+        PP : PlotParameters object
         """
         pass
 

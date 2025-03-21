@@ -720,8 +720,8 @@ always shift your data to fit this convention.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="topological_advection.TopologicalAdvection.Plot">
-<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">PlotLoop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#topological_advection.TopologicalAdvection.Plot" title="Link to this definition"></a></dt>
-<dd><p>Plot the triangulation and/or loop.</p>
+<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">PlotLoop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PlotCurves</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#topological_advection.TopologicalAdvection.Plot" title="Link to this definition"></a></dt>
+<dd><p>Plot the triangulation, loop, and/or geometric curves.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -756,16 +756,19 @@ forward).  Before this, Tri is evolved forward if not already done.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="id12">
-<span class="sig-name descname"><span class="pre">EvolveTri</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Delaunay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.EvolveTri"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id12" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EvolveTri</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Delaunay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.EvolveTri"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id12" title="Link to this definition"></a></dt>
 <dd><p>Evolve Tri forward to the final time slice.</p>
 <p>This takes Tri (resetting it to be a copy of TriInit if already
 evolved), and evolves it forward using the time slices to the final
 time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Delaunay</strong> (<em>bool</em>) – If True then extra triangulation flips will be used to force the
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Delaunay</strong> (<em>bool</em>) – If True then extra triangulation flips will be used to force the
 triangulation to be Delaunay after each time step.
-The default is False.</p>
+The default is False.</p></li>
+<li><p><strong>progress_bar</strong> – If True (default), a progress bar will be printed during evolution</p></li>
+</ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>None.</p>
@@ -775,7 +778,7 @@ The default is False.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="id13">
-<span class="sig-name descname"><span class="pre">GetTopologicalEntropy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frac_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ss_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.GetTopologicalEntropy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id13" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">GetTopologicalEntropy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frac_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ss_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Delaunay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.GetTopologicalEntropy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id13" title="Link to this definition"></a></dt>
 <dd><p>Find the topological entropy of the trajectory set.</p>
 <p>This evolves Tri forward to the final time slice (if not already
 evolved), creates a mesh initialized loop, operates on this loop with
@@ -792,6 +795,9 @@ frac_start to exclude this from the fit. The default is 0.0.</p></li>
 <li><p><strong>ss_indices</strong> (<em>list</em><em> of </em><em>2 int</em>) – The start and stop indices for the fitting. The default is None. If
 provied ss_indices over-ride the start and stop indices calculated
 with frac_start.</p></li>
+<li><p><strong>Delaunay</strong> (<em>bool</em>) – If True then extra triangulation flips will be used to force the
+triangulation to be Delaunay after each time step.
+The default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -847,10 +853,10 @@ integer converted to str.  Ex.: EvolvingLoop0042.png</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="id17">
-<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">PlotLoop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id17" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">PlotLoop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Initial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PlotCurves</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/topological_advection.html#TopologicalAdvection.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id17" title="Link to this definition"></a></dt>
 <dd><p>Plot the triangulation and/or loop.</p>
 <p>Before calling this method, set the desired plotting parameters using
-SetPlotParameters method.  This call</p>
+SetPlotParameters method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -861,6 +867,10 @@ triangulation in TriInit, and initial loop in LoopData.LoopInitial)
 If False (default), the final state is plotted (final triangulation
 is Tri, and final loop in LoopData.LoopFinal).  The triangulation
 and/or Loop will be evolved forward if needed.</p></li>
+<li><p><strong>PlotCurves</strong> (<em>bool</em>) – Flag - If True, the curves stored in CurveSet.Curves (if Initial)
+are plotted (if they have been created). If not Initial, then
+curves stored in CurveSetFinal.Curves are plotted (if created).
+Default: PlotCurves is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>

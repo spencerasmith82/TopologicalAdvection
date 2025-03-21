@@ -249,8 +249,8 @@
 <span class="sd">    PrintPlotParameters()</span>
 <span class="sd">        Print out the current values of the plotting parameters.</span>
 
-<span class="sd">    Plot(PlotLoop=True, Initial=False)</span>
-<span class="sd">        Plot the triangulation and/or loop.</span>
+<span class="sd">    Plot(PlotLoop=True, Initial=False, PlotCurves=False)</span>
+<span class="sd">        Plot the triangulation, loop, and/or geometric curves.</span>
 
 <span class="sd">    MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder=&quot;MovieImages/&quot;,</span>
 <span class="sd">                 ImageName=&quot;EvolvingLoop&quot;, filetype=&quot;.png&quot;)</span>
@@ -298,6 +298,8 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span> <span class="o">=</span> <span class="n">TrajectorySlices</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">Times</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Times</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">))]</span>
         <span class="k">else</span><span class="p">:</span>
@@ -330,6 +332,7 @@
             <span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dz</span>
             <span class="n">ExBnd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-=</span> <span class="n">dz</span>
             <span class="n">ExBnd</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dz</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ExpandedBounds</span> <span class="o">=</span> <span class="n">ExBnd</span>
             <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;ExpandedBounds&quot;</span><span class="p">,</span> <span class="n">ExBnd</span><span class="p">)</span>
         <span class="c1">#  and make a copy of it to do initial loop evaluations</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">TriCopy</span><span class="p">()</span>
@@ -339,10 +342,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">TotalWeightOverTime</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span> <span class="o">=</span> <span class="n">CurveSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">)</span>
+        <span class="c1"># the final curve set needs to be set externally</span>
+        <span class="c1"># this is for any comparison to external algorithms for advecting</span>
+        <span class="c1"># geometric curves</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CurveSetFinal</span> <span class="o">=</span> <span class="n">CurveSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">)</span>
 
 <div class="viewcode-block" id="TopologicalAdvection.EvolveTri">
 <a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.EvolveTri">[docs]</a>
-    <span class="k">def</span> <span class="nf">EvolveTri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Delaunay</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">EvolveTri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Delaunay</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">progress_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve Tri forward to the final time slice.</span>
 
 <span class="sd">        This takes Tri (resetting it to be a copy of TriInit if already</span>
@@ -356,15 +363,22 @@
 <span class="sd">            triangulation to be Delaunay after each time step.</span>
 <span class="sd">            The default is False.</span>
 
+<span class="sd">        progress_bar</span>
+<span class="sd">            If True (default), a progress bar will be printed during evolution</span>
+
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        None.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_ResetTri</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
-            <span class="n">HF</span><span class="o">.</span><span class="n">progressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">progress_bar</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
+                <span class="n">HF</span><span class="o">.</span><span class="n">progressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Evolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Tslices</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">Maintain_Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="o">=</span> <span class="n">Delaunay</span></div>
 
@@ -375,7 +389,8 @@
 
 <div class="viewcode-block" id="TopologicalAdvection.GetTopologicalEntropy">
 <a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.GetTopologicalEntropy">[docs]</a>
-    <span class="k">def</span> <span class="nf">GetTopologicalEntropy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frac_start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ss_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">GetTopologicalEntropy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frac_start</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ss_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="n">Delaunay</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the topological entropy of the trajectory set.</span>
 
 <span class="sd">        This evolves Tri forward to the final time slice (if not already</span>
@@ -397,6 +412,11 @@
 <span class="sd">            provied ss_indices over-ride the start and stop indices calculated</span>
 <span class="sd">            with frac_start.</span>
 
+<span class="sd">        Delaunay : bool</span>
+<span class="sd">            If True then extra triangulation flips will be used to force the</span>
+<span class="sd">            triangulation to be Delaunay after each time step.</span>
+<span class="sd">            The default is False.</span>
+
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        TE : float</span>
@@ -407,7 +427,9 @@
 <span class="sd">            The list of total weight at each time slice</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">TriEvolved</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveTri</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveTri</span><span class="p">(</span><span class="n">Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">Delaunay</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveTri</span><span class="p">(</span><span class="n">Delaunay</span><span class="o">=</span><span class="n">Delaunay</span><span class="p">)</span>
         <span class="n">loopM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">Loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">WeightsM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">OperatorAction</span><span class="p">(</span><span class="n">loopM</span><span class="p">,</span> <span class="n">num_times</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_NumTimes</span><span class="p">)</span>
         <span class="n">LogWeightsM</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">WeightsM</span><span class="p">]</span>
@@ -512,7 +534,11 @@
 <span class="sd">        None.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">(</span><span class="n">Bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">PeriodicBC</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">(</span><span class="n">Bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">TA</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">(</span>
+                <span class="n">Bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">,</span> <span class="n">ExpandedBounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_ExpandedBounds</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TopologicalAdvection.PrintPlotParameters">
@@ -532,11 +558,11 @@
 
 <div class="viewcode-block" id="TopologicalAdvection.Plot">
 <a class="viewcode-back" href="../topological_advection.html#topological_advection.TopologicalAdvection.Plot">[docs]</a>
-    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">PlotLoop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">Initial</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">PlotLoop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">Initial</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">PlotCurves</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the triangulation and/or loop.</span>
 
 <span class="sd">        Before calling this method, set the desired plotting parameters using</span>
-<span class="sd">        SetPlotParameters method.  This call</span>
+<span class="sd">        SetPlotParameters method.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -551,6 +577,12 @@
 <span class="sd">            is Tri, and final loop in LoopData.LoopFinal).  The triangulation</span>
 <span class="sd">            and/or Loop will be evolved forward if needed.</span>
 
+<span class="sd">        PlotCurves : bool</span>
+<span class="sd">            Flag - If True, the curves stored in CurveSet.Curves (if Initial)</span>
+<span class="sd">            are plotted (if they have been created). If not Initial, then</span>
+<span class="sd">            curves stored in CurveSetFinal.Curves are plotted (if created).</span>
+<span class="sd">            Default: PlotCurves is False.</span>
+
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        None.</span>
@@ -558,20 +590,58 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">,</span> <span class="s2">&quot;Delaunay&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IsDelaunay</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">PlotLoop</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">PlotCurves</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span>
+                            <span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">,</span>
+                            <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;need to set an initial curve.&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSetFinal</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span>
+                            <span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSetFinal</span><span class="o">.</span><span class="n">Curves</span><span class="p">,</span>
+                            <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;need to set a final curve.&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="o">.</span><span class="n">Shear</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="p">,</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">PlotCurves</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span>
+                                <span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="p">,</span>
+                                <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># does nothing if already evolved</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">EvolveLoop</span><span class="p">()</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">,</span>
                                           <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">EvolveLoop</span><span class="p">()</span>  <span class="c1"># does nothing if already evolved</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span><span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">,</span>
-                                      <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">Initial</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">TriInit</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span>
+                                    <span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopInitial</span><span class="p">,</span>
+                                    <span class="n">GCurvesIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSet</span><span class="o">.</span><span class="n">Curves</span><span class="p">,</span>
+                                    <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;need to set an initial curve.&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSetFinal</span><span class="o">.</span><span class="n">Curves</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="c1"># does nothing if already evolved</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">EvolveLoop</span><span class="p">()</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">Tri</span><span class="o">.</span><span class="n">Plot</span><span class="p">(</span>
+                                    <span class="n">LoopIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LoopData</span><span class="o">.</span><span class="n">LoopFinal</span><span class="p">,</span>
+                                    <span class="n">GCurvesIn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">CurveSetFinal</span><span class="o">.</span><span class="n">Curves</span><span class="p">,</span>
+                                    <span class="n">PP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PlotParameters</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;need to set a final curve.&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Currently don&#39;t support plotting loops&quot;</span>
                           <span class="s2">&quot; represented with shear coordinates&quot;</span><span class="p">)</span>

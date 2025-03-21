@@ -607,7 +607,7 @@
 
 <span class="sd">    linewidth_tt : float</span>
 <span class="sd">        The line width of the train-track.  If DelaunayAdd is True, then this</span>
-<span class="sd">        is the maximum line-width</span>
+<span class="sd">        is the maximum line-width. Default is 1.0</span>
 
 <span class="sd">    linecolor_tt : str</span>
 <span class="sd">        The line color of the train-track. Default is &#39;r&#39; (red).</span>
@@ -628,6 +628,16 @@
 <span class="sd">        of the maximum weight will be represented as this fraction of</span>
 <span class="sd">        linewidth_tt.  All segments with larger weight will have a line width</span>
 <span class="sd">        that linear in this range.</span>
+
+<span class="sd">    linewidth_curve : float</span>
+<span class="sd">        The line width of the geometric curve. Default is 1.0</span>
+
+<span class="sd">    linecolor_curve : str</span>
+<span class="sd">        The line color of the geometric curve. Default is &#39;b&#39; (blue).</span>
+
+<span class="sd">    alpha_curve : float</span>
+<span class="sd">        The opacity of the geometric curve.  Default is 1.0 (completely</span>
+<span class="sd">        opaque/not transparent).</span>
 
 <span class="sd">    boundary_points : bool</span>
 <span class="sd">        If true, this sets a larger boundary (in ExpandedBounds), which</span>
@@ -661,6 +671,9 @@
     <span class="n">tt_lw_min_frac</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>
     <span class="n">_conversion_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># internal only</span>
     <span class="n">_max_weight</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># internal only</span>
+    <span class="n">linewidth_curve</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">linecolor_curve</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;b&#39;</span>
+    <span class="n">alpha_curve</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
     <span class="n">boundary_points</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">ExpandedBounds</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span></div>
 
@@ -728,7 +741,7 @@
 <span class="sd">        weightlist due to the action of the WeightOperators in</span>
 <span class="sd">        WeightOperatorList).</span>
 
-<span class="sd">    Plot(LoopIn = None, PP: PlotParameters = PlotParameters())</span>
+<span class="sd">    Plot(LoopIn=None, GCurvesIn=None, PP: PlotParameters=PlotParameters())</span>
 <span class="sd">        This plots the triangulation and loop.  See PlotParameters data class</span>
 <span class="sd">        documentation for details on the many options.</span>
 
@@ -782,8 +795,8 @@
         <span class="n">Deltax</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
         <span class="n">Deltay</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Domain</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">a_ratio</span> <span class="o">=</span> <span class="n">Deltax</span><span class="o">/</span><span class="n">Deltay</span>
-        <span class="n">npts_x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">npts</span><span class="o">*</span><span class="n">a_ratio</span><span class="p">))</span>
-        <span class="n">npts_y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="o">/</span><span class="n">npts_x</span><span class="p">)</span>
+        <span class="n">npts_x</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">npts</span><span class="o">*</span><span class="n">a_ratio</span><span class="p">)),</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="n">npts_y</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="o">/</span><span class="n">npts_x</span><span class="p">),</span> <span class="mi">6</span><span class="p">)</span>
         <span class="n">dx</span> <span class="o">=</span> <span class="n">Deltax</span><span class="o">/</span><span class="p">(</span><span class="n">npts_x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">dy</span> <span class="o">=</span> <span class="n">Deltay</span><span class="o">/</span><span class="p">(</span><span class="n">npts_y</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="o">*</span><span class="nb">min</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span>
@@ -2253,6 +2266,54 @@
                         <span class="n">weights_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Wp</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                     <span class="n">line_weights_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Wp_scaled</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">patches_out</span><span class="p">,</span> <span class="n">weights_out</span><span class="p">,</span> <span class="n">line_weights_out</span>
+
+    <span class="k">def</span> <span class="nf">_GeoPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the geometric curve.</span>
+
+<span class="sd">        Plots the given geometric curve</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        GCurvesIn : List of curves</span>
+<span class="sd">            List of Geometric Curves; data for each curve is same as used in</span>
+<span class="sd">            loop initialization from curve:</span>
+<span class="sd">            point_set, is_closed, end_pts_pin, wadd = curve</span>
+<span class="sd">            end_pts_pin and wadd are ignored</span>
+
+<span class="sd">        PP : PlotParameters object</span>
+<span class="sd">            For this method, the relevant PlotParameters attributes are:</span>
+
+<span class="sd">        linewidth_curve : float</span>
+<span class="sd">            The line width of the geometric curve. Default is 1.0</span>
+
+<span class="sd">        linecolor_curve : str</span>
+<span class="sd">            The line color of the geometric curve. Default is &#39;b&#39; (blue).</span>
+
+<span class="sd">        alpha_curve : float</span>
+<span class="sd">            The opacity of the geometric curve.  Default is 1.0 (completely</span>
+<span class="sd">            opaque/not transparent).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">curve</span> <span class="ow">in</span> <span class="n">GCurvesIn</span><span class="p">:</span>
+            <span class="n">point_set</span><span class="p">,</span> <span class="n">is_closed</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">curve</span>
+            <span class="n">gcpatches</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">wrap</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">is_closed</span><span class="p">:</span>
+                <span class="n">wrap</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point_set</span><span class="p">)</span><span class="o">+</span><span class="n">wrap</span><span class="p">):</span>
+                <span class="n">gcpatches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">HF</span><span class="o">.</span><span class="n">BezierLinear</span><span class="p">(</span><span class="n">point_set</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                    <span class="n">point_set</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">point_set</span><span class="p">)]))</span>
+            <span class="n">Pcollection</span> <span class="o">=</span> <span class="n">PatchCollection</span><span class="p">(</span><span class="n">gcpatches</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+                                          <span class="n">alpha</span><span class="o">=</span><span class="n">PP</span><span class="o">.</span><span class="n">alpha_curve</span><span class="p">,</span>
+                                          <span class="n">capstyle</span><span class="o">=</span><span class="s1">&#39;round&#39;</span><span class="p">,</span>
+                                          <span class="n">joinstyle</span><span class="o">=</span><span class="s1">&#39;round&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">Pcollection</span><span class="o">.</span><span class="n">set_linewidth</span><span class="p">(</span><span class="n">PP</span><span class="o">.</span><span class="n">linewidth_curve</span><span class="p">)</span>
+            <span class="n">Pcollection</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="n">PP</span><span class="o">.</span><span class="n">linecolor_curve</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">add_collection</span><span class="p">(</span><span class="n">Pcollection</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Triangulation2D.TriCopy">
 <a class="viewcode-back" href="../top_advec_bnd.html#top_advec_bnd.Triangulation2D.TriCopy">[docs]</a>

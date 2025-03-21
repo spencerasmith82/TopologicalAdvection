@@ -505,6 +505,7 @@
 <div class="viewcode-block" id="Loop.LoopCopy">
 <a class="viewcode-back" href="../top_advec_pbc.html#top_advec_pbc.Loop.LoopCopy">[docs]</a>
     <span class="k">def</span> <span class="nf">LoopCopy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        
         <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 </div>
 
@@ -693,6 +694,16 @@
 <span class="sd">        of the maximum weight will be represented as this fraction of</span>
 <span class="sd">        linewidth_tt.  All segments with larger weight will have a line width</span>
 <span class="sd">        that linear in this range.</span>
+
+<span class="sd">    linewidth_curve : float</span>
+<span class="sd">        The line width of the geometric curve. Default is 1.0</span>
+
+<span class="sd">    linecolor_curve : str</span>
+<span class="sd">        The line color of the geometric curve. Default is &#39;b&#39; (blue).</span>
+
+<span class="sd">    alpha_curve : float</span>
+<span class="sd">        The opacity of the geometric curve.  Default is 1.0 (completely</span>
+<span class="sd">        opaque/not transparent).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># main flags/choices</span>
@@ -718,7 +729,10 @@
     <span class="c1"># DelaunayAdd</span>
     <span class="n">tt_lw_min_frac</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>
     <span class="n">_conversion_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># internal only</span>
-    <span class="n">_max_weight</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># internal only</span></div>
+    <span class="n">_max_weight</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># internal only</span>
+    <span class="n">linewidth_curve</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">linecolor_curve</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;b&#39;</span>
+    <span class="n">alpha_curve</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span></div>
 
 <span class="c1"># End of PlotParameters Class ################################################</span>
 
@@ -784,7 +798,7 @@
 <span class="sd">        weightlist due to the action of the WeightOperators in</span>
 <span class="sd">        WeightOperatorList).</span>
 
-<span class="sd">    Plot(LoopIn = None, PP: PlotParameters = PlotParameters())</span>
+<span class="sd">    Plot(LoopIn=None, GCurvesIn=None, PP: PlotParameters=PlotParameters())</span>
 <span class="sd">        This plots the triangulation and loop.  See PlotParameters data class</span>
 <span class="sd">        documentation for details on the many options.</span>
 
@@ -880,16 +894,11 @@
                     <span class="n">temppoints</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">shear_val</span>
         <span class="c1">#  create the initial Delaunay triangulation.  The option forces the</span>
         <span class="c1">#  creation of simplices for degenerate points by applying a random</span>
-        <span class="c1">#  perturbation.</span>
+        <span class="c1">#  perturbation. (QJ for perturbations)</span>
         <span class="n">temptri</span> <span class="o">=</span> <span class="n">Delaunay</span><span class="p">(</span><span class="n">temppoints</span><span class="p">,</span> <span class="n">qhull_options</span><span class="o">=</span><span class="s2">&quot;QJ Pp&quot;</span><span class="p">)</span>
-        <span class="c1">#  the copy of the FD that each point in a triangle is in</span>
-        <span class="n">ptcopypos</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1">#  convention: 0 for FD, 1 BL, 2 BC, 3 BR, 4 MR, 5 TR, 6 TC, 7 TL, 8 ML</span>
         <span class="c1">#  the point in the FD that each point in a triangle maps to</span>
         <span class="n">ptfdID</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1">#  gives 1 if all 3 points are in the fundamental domain, 0 if at least</span>
-        <span class="c1">#  one point in in the FD, and -1 if they are all outside the FD</span>
-        <span class="n">triloc</span><span class="p">,</span> <span class="n">edgesimps</span><span class="p">,</span> <span class="n">FDsimps</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">edgesimps</span><span class="p">,</span> <span class="n">FDsimps</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">temptri</span><span class="o">.</span><span class="n">simplices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
             <span class="n">tempptlist</span> <span class="o">=</span> <span class="n">temptri</span><span class="o">.</span><span class="n">simplices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
             <span class="n">fdID</span><span class="p">,</span> <span class="n">copypos</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
@@ -897,32 +906,29 @@
                 <span class="n">fdID</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempptlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ptnum</span><span class="p">)</span>
                 <span class="n">copypos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempptlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">_ptnum</span><span class="p">)</span>
             <span class="n">ptfdID</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fdID</span><span class="p">)</span>
-            <span class="n">ptcopypos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copypos</span><span class="p">)</span>
             <span class="n">InFD</span> <span class="o">=</span> <span class="p">[</span><span class="n">copypos</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
             <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">InFD</span><span class="p">):</span>  <span class="c1"># all points are in the FD</span>
-                <span class="n">triloc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
                 <span class="n">FDsimps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
             <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">InFD</span><span class="p">):</span>  <span class="c1"># one or two points in the FD</span>
-                <span class="n">triloc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="n">edgesimps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>  <span class="c1"># no points in the FD</span>
-                <span class="n">triloc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># else:  # no points in the FD</span>
+            <span class="c1">#     # need to check for triangles that cross and edge but don&#39;t</span>
+            <span class="c1">#     # have a point in the FD</span>
+            <span class="c1">#     if not (copypos[0] == copypos[1] and copypos[1] == copypos[2]):</span>
+            <span class="c1">#         tri_temp = [temppoints[ptid] for ptid in tempptlist]</span>
+            <span class="c1">#         domain_temp = [[0, 0], self.FDsizes]</span>
+            <span class="c1">#         if HF.TriEdgeCrossBnd(tri_temp, domain_temp):</span>
+            <span class="c1">#             edgesimps.append(i)</span>
+
         <span class="c1">#  now we need to create a list of equivalent shifted triangles</span>
         <span class="c1">#  (only ones that straddle the FD edge are needed)</span>
         <span class="n">Equiv_Tri</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">temptri</span><span class="o">.</span><span class="n">simplices</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">edgesimps</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">ptidsi</span> <span class="o">=</span> <span class="n">ptfdID</span><span class="p">[</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">edgesimps</span><span class="p">)):</span>
-                <span class="n">ptidsi</span> <span class="o">=</span> <span class="n">temptri</span><span class="o">.</span><span class="n">simplices</span><span class="p">[</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
-                <span class="n">triptsi</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">temptri</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ptidsi</span><span class="p">]</span>
-                <span class="n">ptidsj</span> <span class="o">=</span> <span class="n">temptri</span><span class="o">.</span><span class="n">simplices</span><span class="p">[</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
-                <span class="n">triptsj</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">temptri</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ptidsj</span><span class="p">]</span>
+                <span class="n">ptidsj</span> <span class="o">=</span> <span class="n">ptfdID</span><span class="p">[</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
                 <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-                    <span class="n">triptsj_roll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">triptsj</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-                    <span class="n">vec</span> <span class="o">=</span> <span class="p">[</span><span class="n">triptsj_roll</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="o">-</span><span class="n">triptsi</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
-                    <span class="n">diff_mag</span> <span class="o">=</span> <span class="mi">0</span>
-                    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-                        <span class="n">diff_mag</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">vec</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="o">-</span><span class="n">vec</span><span class="p">[(</span><span class="n">m</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">])</span>
-                    <span class="k">if</span> <span class="n">diff_mag</span> <span class="o">&lt;</span> <span class="mf">0.000000001</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">FDsizes</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">ptidsi</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">ptidsj</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)):</span>
                         <span class="c1">#  if true, then the i and j triangles map to the same</span>
                         <span class="c1">#  points in the FD and they are the same triangle</span>
                         <span class="n">Equiv_Tri</span><span class="p">[</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">edgesimps</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">k</span><span class="p">])</span>
@@ -2868,6 +2874,54 @@
                                     <span class="n">weights_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Wp</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                                 <span class="n">line_weights_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Wp_scaled</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">patches_out</span><span class="p">,</span> <span class="n">weights_out</span><span class="p">,</span> <span class="n">line_weights_out</span>
+
+    <span class="k">def</span> <span class="nf">_GeoPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the geometric curve.</span>
+
+<span class="sd">        Plots the given geometric curve</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        GCurvesIn : List of curves</span>
+<span class="sd">            List of Geometric Curves; data for each curve is same as used in</span>
+<span class="sd">            loop initialization from curve:</span>
+<span class="sd">            point_set, is_closed, end_pts_pin, wadd = curve</span>
+<span class="sd">            end_pts_pin and wadd are ignored</span>
+
+<span class="sd">        PP : PlotParameters object</span>
+<span class="sd">            For this method, the relevant PlotParameters attributes are:</span>
+
+<span class="sd">        linewidth_curve : float</span>
+<span class="sd">            The line width of the geometric curve. Default is 1.0</span>
+
+<span class="sd">        linecolor_curve : str</span>
+<span class="sd">            The line color of the geometric curve. Default is &#39;b&#39; (blue).</span>
+
+<span class="sd">        alpha_curve : float</span>
+<span class="sd">            The opacity of the geometric curve.  Default is 1.0 (completely</span>
+<span class="sd">            opaque/not transparent).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">curve</span> <span class="ow">in</span> <span class="n">GCurvesIn</span><span class="p">:</span>
+            <span class="n">point_set</span><span class="p">,</span> <span class="n">is_closed</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">curve</span>
+            <span class="n">gcpatches</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">wrap</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">is_closed</span><span class="p">:</span>
+                <span class="n">wrap</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point_set</span><span class="p">)</span><span class="o">+</span><span class="n">wrap</span><span class="p">):</span>
+                <span class="n">gcpatches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">HF</span><span class="o">.</span><span class="n">BezierLinear</span><span class="p">(</span><span class="n">point_set</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                    <span class="n">point_set</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">point_set</span><span class="p">)]))</span>
+            <span class="n">Pcollection</span> <span class="o">=</span> <span class="n">PatchCollection</span><span class="p">(</span><span class="n">gcpatches</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+                                          <span class="n">alpha</span><span class="o">=</span><span class="n">PP</span><span class="o">.</span><span class="n">alpha_curve</span><span class="p">,</span>
+                                          <span class="n">capstyle</span><span class="o">=</span><span class="s1">&#39;round&#39;</span><span class="p">,</span>
+                                          <span class="n">joinstyle</span><span class="o">=</span><span class="s1">&#39;round&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">Pcollection</span><span class="o">.</span><span class="n">set_linewidth</span><span class="p">(</span><span class="n">PP</span><span class="o">.</span><span class="n">linewidth_curve</span><span class="p">)</span>
+            <span class="n">Pcollection</span><span class="o">.</span><span class="n">set_edgecolor</span><span class="p">(</span><span class="n">PP</span><span class="o">.</span><span class="n">linecolor_curve</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">add_collection</span><span class="p">(</span><span class="n">Pcollection</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Triangulation2D.TriCopy">
 <a class="viewcode-back" href="../top_advec_pbc.html#top_advec_pbc.Triangulation2D.TriCopy">[docs]</a>

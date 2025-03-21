@@ -174,8 +174,8 @@ class TopologicalAdvection:
     PrintPlotParameters()
         Print out the current values of the plotting parameters.
 
-    Plot(PlotLoop=True, Initial=False)
-        Plot the triangulation and/or loop.
+    Plot(PlotLoop=True, Initial=False, PlotCurves=False)
+        Plot the triangulation, loop, and/or geometric curves.
 
     MovieFigures(PlotLoop=True, Delaunay=True, ImageFolder="MovieImages/",
                  ImageName="EvolvingLoop", filetype=".png")
@@ -267,6 +267,10 @@ class TopologicalAdvection:
         self.TotalWeightOverTime = None
         self.LoopData = None
         self.CurveSet = CurveSet(self.Domain, self.PeriodicBC)
+        # the final curve set needs to be set externally
+        # this is for any comparison to external algorithms for advecting
+        # geometric curves
+        self.CurveSetFinal = CurveSet(self.Domain, self.PeriodicBC)
 
     def EvolveTri(self, Delaunay=False, progress_bar=True):
         """Evolve Tri forward to the final time slice.
@@ -305,7 +309,8 @@ class TopologicalAdvection:
         self.Tri = self.TriInit.TriCopy()
         self.TriEvolved = False
 
-    def GetTopologicalEntropy(self, frac_start=0.0, ss_indices=None):
+    def GetTopologicalEntropy(self, frac_start=0.0, ss_indices=None,
+                              Delaunay=False):
         """Find the topological entropy of the trajectory set.
 
         This evolves Tri forward to the final time slice (if not already
@@ -327,6 +332,11 @@ class TopologicalAdvection:
             provied ss_indices over-ride the start and stop indices calculated
             with frac_start.
 
+        Delaunay : bool
+            If True then extra triangulation flips will be used to force the
+            triangulation to be Delaunay after each time step.
+            The default is False.
+
         Returns
         -------
         TE : float
@@ -337,7 +347,9 @@ class TopologicalAdvection:
             The list of total weight at each time slice
         """
         if not self.TriEvolved:
-            self.EvolveTri()
+            self.EvolveTri(Delaunay=Delaunay)
+        elif self.IsDelaunay is not Delaunay:
+            self.EvolveTri(Delaunay=Delaunay)
         loopM = self.TA.Loop(self.TriInit, mesh=True)
         WeightsM = self.Tri.OperatorAction(loopM, num_times=self._NumTimes)
         LogWeightsM = [np.log(w) for w in WeightsM]
@@ -445,7 +457,7 @@ class TopologicalAdvection:
             if not (key == "conversion_factor" or key == "max_weight"):
                 print(f"{key}: {value}")
 
-    def Plot(self, PlotLoop=True, Initial=False):
+    def Plot(self, PlotLoop=True, Initial=False, PlotCurves=False):
         """Plot the triangulation and/or loop.
 
         Before calling this method, set the desired plotting parameters using
@@ -464,6 +476,12 @@ class TopologicalAdvection:
             is Tri, and final loop in LoopData.LoopFinal).  The triangulation
             and/or Loop will be evolved forward if needed.
 
+        PlotCurves : bool
+            Flag - If True, the curves stored in CurveSet.Curves (if Initial)
+            are plotted (if they have been created). If not Initial, then
+            curves stored in CurveSetFinal.Curves are plotted (if created).
+            Default: PlotCurves is False.
+
         Returns
         -------
         None.
@@ -471,20 +489,58 @@ class TopologicalAdvection:
         """
         setattr(self.PlotParameters, "Delaunay", self.IsDelaunay)
         if not PlotLoop:
-            if Initial:
-                self.TriInit.Plot(LoopIn=None, PP=self.PlotParameters)
+            if not PlotCurves:
+                if Initial:
+                    self.TriInit.Plot(LoopIn=None, PP=self.PlotParameters)
+                else:
+                    self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
             else:
-                self.Tri.Plot(LoopIn=None, PP=self.PlotParameters)
+                if Initial:
+                    if not len(self.CurveSet.Curves) == 0:
+                        self.TriInit.Plot(
+                            LoopIn=None, GCurvesIn=self.CurveSet.Curves,
+                            PP=self.PlotParameters)
+                    else:
+                        print("need to set an initial curve.")
+                else:
+                    if not len(self.CurveSetFinal.Curves) == 0:
+                        self.Tri.Plot(
+                            LoopIn=None, GCurvesIn=self.CurveSetFinal.Curves,
+                            PP=self.PlotParameters)
+                    else:
+                        print("need to set a final curve.")
         else:
             if self.LoopData is not None:
                 if not self.LoopData.LoopInitial.Shear:
-                    if Initial:
-                        self.TriInit.Plot(LoopIn=self.LoopData.LoopInitial,
+                    if not PlotCurves:
+                        if Initial:
+                            self.TriInit.Plot(
+                                LoopIn=self.LoopData.LoopInitial,
+                                PP=self.PlotParameters)
+                        else:
+                            # does nothing if already evolved
+                            self.EvolveLoop()
+                            self.Tri.Plot(LoopIn=self.LoopData.LoopFinal,
                                           PP=self.PlotParameters)
                     else:
-                        self.EvolveLoop()  # does nothing if already evolved
-                        self.Tri.Plot(LoopIn=self.LoopData.LoopFinal,
-                                      PP=self.PlotParameters)
+                        if Initial:
+                            if not len(self.CurveSet.Curves) == 0:
+                                self.TriInit.Plot(
+                                    LoopIn=self.LoopData.LoopInitial,
+                                    GCurvesIn=self.CurveSet.Curves,
+                                    PP=self.PlotParameters)
+                            else:
+                                print("need to set an initial curve.")
+                        else:
+                            if not len(self.CurveSetFinal.Curves) == 0:
+                                # does nothing if already evolved
+                                self.EvolveLoop()
+                                self.Tri.Plot(
+                                    LoopIn=self.LoopData.LoopFinal,
+                                    GCurvesIn=self.CurveSetFinal.Curves,
+                                    PP=self.PlotParameters)
+                            else:
+                                print("need to set a final curve.")
                 else:
                     print("Currently don't support plotting loops"
                           " represented with shear coordinates")

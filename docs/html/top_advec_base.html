@@ -550,16 +550,19 @@ option).</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="id9">
-<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">LoopIn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PP</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#top_advec_base.PlotParameters" title="top_advec_base.PlotParameters"><span class="pre">PlotParameters</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PlotParameters(filename=None,</span> <span class="pre">triplot=True)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/top_advec_base.html#Triangulation2D_Base.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id9" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">Plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">LoopIn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">GCurvesIn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PP</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#top_advec_base.PlotParameters" title="top_advec_base.PlotParameters"><span class="pre">PlotParameters</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PlotParameters(filename=None,</span> <span class="pre">triplot=True)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/top_advec_base.html#Triangulation2D_Base.Plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#id9" title="Link to this definition"></a></dt>
 <dd><p>General Plotting function.</p>
-<p>Plots the points, triangulation, and loops with a large variety
-of options specified in PlotParameters (see the documentation for
-PlotParameters data class for more details).</p>
+<p>Plots the points, triangulation, loops, and geometric curves with a
+large variety of options specified in PlotParameters (see the
+documentation for PlotParameters data class for more details).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>LoopIn</strong> (<em>Loop object</em>) – If a loop object is passed, then the train-track associated with
 this loop will be included in the plot. Default is None.</p></li>
+<li><p><strong>GCurvesIn</strong> (<em>List</em><em> of </em><em>curves</em>) – If GCurvesIn is given, then the geometric curves will be plotted.
+curves data is same as used in loop initialization in child
+classes.  Default is None.</p></li>
 <li><p><strong>PP</strong> (<em>PlotParameters data object</em>) – All of the options for customizing the plot are wrapped up in
 this data object.  The top-level attributes of PP that are used
 in Plot are:</p></li>

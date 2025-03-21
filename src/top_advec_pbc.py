@@ -589,6 +589,16 @@ class PlotParameters(PlotParameters):
         of the maximum weight will be represented as this fraction of
         linewidth_tt.  All segments with larger weight will have a line width
         that linear in this range.
+
+    linewidth_curve : float
+        The line width of the geometric curve. Default is 1.0
+
+    linecolor_curve : str
+        The line color of the geometric curve. Default is 'b' (blue).
+
+    alpha_curve : float
+        The opacity of the geometric curve.  Default is 1.0 (completely
+        opaque/not transparent).
     """
 
     # main flags/choices
@@ -615,6 +625,9 @@ class PlotParameters(PlotParameters):
     tt_lw_min_frac: float = 0.05
     _conversion_factor: float = None  # internal only
     _max_weight: int = None  # internal only
+    linewidth_curve: float = 1.0
+    linecolor_curve: str = 'b'
+    alpha_curve: float = 1.0
 # End of PlotParameters Class ################################################
 
 
@@ -677,7 +690,7 @@ class Triangulation2D(Triangulation2D_Base):
         weightlist due to the action of the WeightOperators in
         WeightOperatorList).
 
-    Plot(LoopIn = None, PP: PlotParameters = PlotParameters())
+    Plot(LoopIn=None, GCurvesIn=None, PP: PlotParameters=PlotParameters())
         This plots the triangulation and loop.  See PlotParameters data class
         documentation for details on the many options.
 
@@ -2744,6 +2757,54 @@ class Triangulation2D(Triangulation2D_Base):
                                     weights_out.append(Wp[i])
                                 line_weights_out.append(Wp_scaled[i])
         return patches_out, weights_out, line_weights_out
+
+    def _GeoPlotBase(self, ax, GCurvesIn, PP: PlotParameters):
+        """Plot the geometric curve.
+
+        Plots the given geometric curve
+
+        Parameters
+        ----------
+        ax : matplotlib axis object
+            The figure axis to add elements to
+
+        GCurvesIn : List of curves
+            List of Geometric Curves; data for each curve is same as used in
+            loop initialization from curve:
+            point_set, is_closed, end_pts_pin, wadd = curve
+            end_pts_pin and wadd are ignored
+
+        PP : PlotParameters object
+            For this method, the relevant PlotParameters attributes are:
+
+        linewidth_curve : float
+            The line width of the geometric curve. Default is 1.0
+
+        linecolor_curve : str
+            The line color of the geometric curve. Default is 'b' (blue).
+
+        alpha_curve : float
+            The opacity of the geometric curve.  Default is 1.0 (completely
+            opaque/not transparent).
+
+        """
+        for curve in GCurvesIn:
+            point_set, is_closed, _, _ = curve
+            gcpatches = []
+            wrap = -1
+            if is_closed:
+                wrap = 0
+            for i in range(len(point_set)+wrap):
+                gcpatches.append(
+                    HF.BezierLinear(point_set[i],
+                                    point_set[(i+1) % len(point_set)]))
+            Pcollection = PatchCollection(gcpatches, fc="none",
+                                          alpha=PP.alpha_curve,
+                                          capstyle='round',
+                                          joinstyle='round', zorder=3)
+            Pcollection.set_linewidth(PP.linewidth_curve)
+            Pcollection.set_edgecolor(PP.linecolor_curve)
+            ax.add_collection(Pcollection)
 
     def TriCopy(self, EvolutionReset=True):
         """Create a copy of this Triangulation2D object.

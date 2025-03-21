@@ -734,18 +734,24 @@
 
 <div class="viewcode-block" id="Triangulation2D_Base.Plot">
 <a class="viewcode-back" href="../top_advec_base.html#top_advec_base.Triangulation2D_Base.Plot">[docs]</a>
-    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span> <span class="o">=</span> <span class="n">PlotParameters</span><span class="p">()):</span>
+    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">LoopIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+             <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span> <span class="o">=</span> <span class="n">PlotParameters</span><span class="p">()):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;General Plotting function.</span>
 
-<span class="sd">        Plots the points, triangulation, and loops with a large variety</span>
-<span class="sd">        of options specified in PlotParameters (see the documentation for</span>
-<span class="sd">        PlotParameters data class for more details).</span>
+<span class="sd">        Plots the points, triangulation, loops, and geometric curves with a</span>
+<span class="sd">        large variety of options specified in PlotParameters (see the</span>
+<span class="sd">        documentation for PlotParameters data class for more details).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        LoopIn : Loop object</span>
 <span class="sd">            If a loop object is passed, then the train-track associated with</span>
 <span class="sd">            this loop will be included in the plot. Default is None.</span>
+
+<span class="sd">        GCurvesIn : List of curves</span>
+<span class="sd">            If GCurvesIn is given, then the geometric curves will be plotted.</span>
+<span class="sd">            curves data is same as used in loop initialization in child</span>
+<span class="sd">            classes.  Default is None.</span>
 
 <span class="sd">        PP : PlotParameters data object</span>
 <span class="sd">            All of the options for customizing the plot are wrapped up in</span>
@@ -767,6 +773,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_TriangulationPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
         <span class="c1">#  the points</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_PointPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
+        <span class="c1">#  only plot a geometric curve if it is given</span>
+        <span class="k">if</span> <span class="n">GCurvesIn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_GeoPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">GCurvesIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
         <span class="c1">#  only plot the traintrack if a Loop is given</span>
         <span class="k">if</span> <span class="n">LoopIn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_TTPlotBase</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">LoopIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">)</span>
@@ -843,7 +852,25 @@
 <span class="sd">            The data in LoopIn determine the train-track</span>
 
 <span class="sd">        PP : PlotParameters object</span>
-<span class="sd">            For this method, the relevant PlotParameters attributes are:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_GeoPlotBase</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">GCurveIn</span><span class="p">,</span> <span class="n">PP</span><span class="p">:</span> <span class="n">PlotParameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the geometric curve.</span>
+
+<span class="sd">        Plots the given geometric curve</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ax : matplotlib axis object</span>
+<span class="sd">            The figure axis to add elements to</span>
+
+<span class="sd">        GCurveIn : List</span>
+<span class="sd">            Geometric Curve; data is same as used in loop initialization in</span>
+<span class="sd">            child classes.</span>
+
+<span class="sd">        PP : PlotParameters object</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 

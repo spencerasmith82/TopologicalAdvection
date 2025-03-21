@@ -160,6 +160,25 @@
 
 
 
+<div class="viewcode-block" id="TriEdgeCrossBnd">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.TriEdgeCrossBnd">[docs]</a>
+<span class="k">def</span> <span class="nf">TriEdgeCrossBnd</span><span class="p">(</span><span class="n">triangle</span><span class="p">,</span> <span class="n">boundary</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Do the triangle edges crosse one of the domain boundaries.&quot;&quot;&quot;</span>
+    <span class="n">BoundaryPoints</span> <span class="o">=</span> <span class="p">[[</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span>
+                      <span class="p">[</span><span class="n">boundary</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">boundary</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">Line1</span> <span class="o">=</span> <span class="p">[</span><span class="n">triangle</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">triangle</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">BoundaryPoints</span><span class="p">)):</span>
+            <span class="n">Line2</span> <span class="o">=</span> <span class="p">[</span><span class="n">BoundaryPoints</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                     <span class="n">BoundaryPoints</span><span class="p">[(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">BoundaryPoints</span><span class="p">)]]</span>
+            <span class="k">if</span> <span class="n">IsIntersection</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
 <div class="viewcode-block" id="CounterToStr">
 <a class="viewcode-back" href="../helper_fns.html#helper_fns.CounterToStr">[docs]</a>
 <span class="k">def</span> <span class="nf">CounterToStr</span><span class="p">(</span><span class="n">countin</span><span class="p">):</span>
