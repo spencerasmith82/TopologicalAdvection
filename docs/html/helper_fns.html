@@ -59,7 +59,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.BinarySearchIns"><code class="docutils literal notranslate"><span class="pre">BinarySearchIns()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.CopyLocations"><code class="docutils literal notranslate"><span class="pre">CopyLocations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.CounterToStr"><code class="docutils literal notranslate"><span class="pre">CounterToStr()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#helper_fns.Curl"><code class="docutils literal notranslate"><span class="pre">Curl()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#helper_fns.Cross"><code class="docutils literal notranslate"><span class="pre">Cross()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetBoundingDomainSlice"><code class="docutils literal notranslate"><span class="pre">GetBoundingDomainSlice()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetBoundingDomainTraj"><code class="docutils literal notranslate"><span class="pre">GetBoundingDomainTraj()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetCenter"><code class="docutils literal notranslate"><span class="pre">GetCenter()</span></code></a></li>
@@ -67,12 +67,15 @@
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetIntersectionPoint"><code class="docutils literal notranslate"><span class="pre">GetIntersectionPoint()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetIntersectionTimes"><code class="docutils literal notranslate"><span class="pre">GetIntersectionTimes()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.GetMinMaxXYTrajVals"><code class="docutils literal notranslate"><span class="pre">GetMinMaxXYTrajVals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#helper_fns.HLineIntersection"><code class="docutils literal notranslate"><span class="pre">HLineIntersection()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.IsDelaunayBase"><code class="docutils literal notranslate"><span class="pre">IsDelaunayBase()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.IsDelaunayBaseWMask"><code class="docutils literal notranslate"><span class="pre">IsDelaunayBaseWMask()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.IsIntersection"><code class="docutils literal notranslate"><span class="pre">IsIntersection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#helper_fns.IsIntersection2"><code class="docutils literal notranslate"><span class="pre">IsIntersection2()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.LinFuncInterp"><code class="docutils literal notranslate"><span class="pre">LinFuncInterp()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.Reduce_List"><code class="docutils literal notranslate"><span class="pre">Reduce_List()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.TriEdgeCrossBnd"><code class="docutils literal notranslate"><span class="pre">TriEdgeCrossBnd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#helper_fns.VLineIntersection"><code class="docutils literal notranslate"><span class="pre">VLineIntersection()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#helper_fns.progressBar"><code class="docutils literal notranslate"><span class="pre">progressBar()</span></code></a></li>
 </ul>
 </li>
@@ -234,10 +237,10 @@ left), 8 (middle left)</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="helper_fns.Curl">
-<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">Curl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#Curl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.Curl" title="Link to this definition"></a></dt>
-<dd><p>Curl of two vectors.</p>
-<p>Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2.
+<dt class="sig sig-object py" id="helper_fns.Cross">
+<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">Cross</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#Cross"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.Cross" title="Link to this definition"></a></dt>
+<dd><p>Cross product of two vectors.</p>
+<p>Cross returns the cross product of two (2d) vectors (as lists) vec1 X vec2.
 Output is single number (z-component of resultant vec)</p>
 </dd></dl>
 
@@ -294,6 +297,12 @@ their initial point to final point)</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="helper_fns.HLineIntersection">
+<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">HLineIntersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yval</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#HLineIntersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.HLineIntersection" title="Link to this definition"></a></dt>
+<dd><p>Detect intersection between given line and a horizontal line.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="helper_fns.IsDelaunayBase">
 <span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">IsDelaunayBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ay</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Bx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">By</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Cx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Cy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Dy</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#IsDelaunayBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.IsDelaunayBase" title="Link to this definition"></a></dt>
 <dd><p>Is the quadrilateral Delaunay.</p>
@@ -313,7 +322,15 @@ True/False array corresponding to whether the input quadrilateral
 
 <dl class="py function">
 <dt class="sig sig-object py" id="helper_fns.IsIntersection">
-<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">IsIntersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Line1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Line2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeinfo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#IsIntersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.IsIntersection" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">IsIntersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Line1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Line2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#IsIntersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.IsIntersection" title="Link to this definition"></a></dt>
+<dd><p>Do the two line segments intersect eachother.</p>
+<p>IsIntersection takes in two lines (each defined by two points) and outputs
+True if they intersect (between each of their point pairs).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="helper_fns.IsIntersection2">
+<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">IsIntersection2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Line1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Line2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeinfo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#IsIntersection2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.IsIntersection2" title="Link to this definition"></a></dt>
 <dd><p>Do the two line segments intersect eachother.</p>
 <p>IsIntersection takes in two lines (each defined by two points) and outputs
 True if they intersect (between each of their point pairs). If the flag
@@ -346,6 +363,12 @@ recorded crossings)</p>
 <dt class="sig sig-object py" id="helper_fns.TriEdgeCrossBnd">
 <span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">TriEdgeCrossBnd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">triangle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#TriEdgeCrossBnd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.TriEdgeCrossBnd" title="Link to this definition"></a></dt>
 <dd><p>Do the triangle edges crosse one of the domain boundaries.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="helper_fns.VLineIntersection">
+<span class="sig-prename descclassname"><span class="pre">helper_fns.</span></span><span class="sig-name descname"><span class="pre">VLineIntersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xval</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/helper_fns.html#VLineIntersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#helper_fns.VLineIntersection" title="Link to this definition"></a></dt>
+<dd><p>Detect intersection between given line and a vertical line.</p>
 </dd></dl>
 
 <dl class="py function">

@@ -1085,9 +1085,13 @@ class Triangulation2D(Triangulation2D_Base):
         CrossList = []
         #  first get the list of future pos copy locations
         Dx, Dy = self.FDsizes
-        Lines = [[[0, -Dy], [0, 2*Dy]], [[Dx, -Dy], [Dx, 2*Dy]],
-                 [[-Dx, 0], [2*Dx, 0]], [[-Dx, Dy], [2*Dx, Dy]]]
-        movedir = [[-1, 0], [1, 0], [0, -1], [0, 1]]
+        HLines = [0, Dy]
+        VLines = [0, Dx]
+        movedirDU = [[0, -1], [0, 1]]
+        movedirLR = [[-1, 0], [1, 0]]
+        # Lines = [[[0, -Dy], [0, 2*Dy]], [[Dx, -Dy], [Dx, 2*Dy]],
+        #         [[-Dx, 0], [2*Dx, 0]], [[-Dx, Dy], [2*Dx, Dy]]]
+        # movedir = [[-1, 0], [1, 0], [0, -1], [0, 1]]
         for i in range(len(self._pointposfuture)):
             if not self._FuturePosRelCopyLoc[i] == 0:
                 posi = [self.pointpos[i][0], self.pointpos[i][1]]
@@ -1095,10 +1099,19 @@ class Triangulation2D(Triangulation2D_Base):
                 posfn = [posf[k]+self.FDsizes[k]*self._dpindices[
                     self._FuturePosRelCopyLoc[i]][k] for k in range(2)]
                 newline = [posi, posfn]
-                for j in range(len(Lines)):
-                    IsInt = HF.IsIntersection(newline, Lines[j], timeinfo=True)
+                for j in range(2):
+                    IsInt = HF.HLineIntersection(newline, HLines[j])
                     if IsInt[0]:
-                        CrossList.append([i, IsInt[1], movedir[j]])
+                        CrossList.append([i, IsInt[1], movedirDU[j]])
+                for j in range(2):
+                    IsInt = HF.VLineIntersection(newline, VLines[j])
+                    if IsInt[0]:
+                        CrossList.append([i, IsInt[1], movedirLR[j]])
+                # for j in range(len(Lines)):
+                #    IsInt = HF.IsIntersection(newline, Lines[j],
+                #                               timeinfo=True)
+                #    if IsInt[0]:
+                #        CrossList.append([i, IsInt[1], movedir[j]])
         CrossList.sort(key=itemgetter(1), reverse=True)
         #  returns the point index, the time of crossing, and the move
         #  direction (-1,0,1 for both the x and y directions)
@@ -2017,8 +2030,8 @@ class Triangulation2D(Triangulation2D_Base):
         vertices = self._Get_Shifted_Vertices(simp, l_id, ix, iy)
         trial_pt = np.array(pt)
         for i in range(3):
-            c_i = HF.Curl(vertices[(i+1) % 3]-vertices[i],
-                          trial_pt - vertices[i])
+            c_i = HF.Cross(vertices[(i+1) % 3]-vertices[i],
+                           trial_pt - vertices[i])
             if c_i < 0.0:
                 return False
         return True
@@ -2413,8 +2426,8 @@ class Triangulation2D(Triangulation2D_Base):
             # a vertex.  If so, we modify the control points
             for i in range(3):
                 side = 2  # default is left
-                C1 = HF.Curl(AdjEdgeHalf[i, :] - EdgeHalf[i, :],
-                             EdgeHalf[i, :] - CenterEdgeHalf[i, :])
+                C1 = HF.Cross(AdjEdgeHalf[i, :] - EdgeHalf[i, :],
+                              EdgeHalf[i, :] - CenterEdgeHalf[i, :])
                 if C1 > 0:
                     side = 1  # right
                 Line1 = [CenterEdgeHalf[i, :], AdjEdgeHalf[i, :]]

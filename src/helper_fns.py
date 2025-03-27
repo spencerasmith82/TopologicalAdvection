@@ -236,7 +236,7 @@ def Reduce_List(List_In):
         Reduce_List(List_In)
 
 
-def IsIntersection(Line1, Line2, timeinfo=False):
+def IsIntersection2(Line1, Line2, timeinfo=False):
     """Do the two line segments intersect eachother.
 
     IsIntersection takes in two lines (each defined by two points) and outputs
@@ -245,6 +245,9 @@ def IsIntersection(Line1, Line2, timeinfo=False):
     whose parameterized intersection time is returned.  The time is the
     fraction of the line from Line1[0] to Line1[1]
     """
+    # note that this has been superseded by IsIntersection, HLineIntersection,
+    # and VLineIntersection, which are more numerically stable for our use
+    # cases
     IsInt = False
     D1x = Line1[1][0]-Line1[0][0]  # line 1 difference in x endpoints
     D1y = Line1[1][1]-Line1[0][1]  # same for y
@@ -279,6 +282,53 @@ def IsIntersection(Line1, Line2, timeinfo=False):
         return [IsInt, t1]
     else:
         return IsInt  # return just whether there is a good intersection
+
+
+def IsIntersection(Line1, Line2):
+    """Do the two line segments intersect eachother.
+
+    IsIntersection takes in two lines (each defined by two points) and outputs
+    True if they intersect (between each of their point pairs).
+    """
+    L1i, L1f = Line1
+    L2i, L2f = Line2
+    c12i = Cross([L1f[0]-L1i[0], L1f[1]-L1i[1]],
+                 [L2i[0]-L1i[0], L2i[1]-L1i[1]])
+    c12f = Cross([L1f[0]-L1i[0], L1f[1]-L1i[1]],
+                 [L2f[0]-L1i[0], L2f[1]-L1i[1]])
+    if c12i*c12f > 0.0:
+        # ends of line2 are on same side of line1 - no intersection
+        return False
+    c21i = Cross([L2f[0]-L2i[0], L2f[1]-L2i[1]],
+                 [L1i[0]-L2i[0], L1i[1]-L2i[1]])
+    c21f = Cross([L2f[0]-L2i[0], L2f[1]-L2i[1]],
+                 [L1f[0]-L2i[0], L1f[1]-L2i[1]])
+    if c21i*c21f > 0.0:
+        # ends of line1 are on same side of line2 - no intersection
+        return False
+    return True
+
+
+def HLineIntersection(Line, yval):
+    """Detect intersection between given line and a horizontal line."""
+    IsInt = False
+    t = None
+    if ((Line[0][1] > yval and Line[1][1] < yval) or
+            (Line[0][1] < yval and Line[1][1] > yval)):
+        IsInt = True
+        t = np.abs(Line[0][1]-yval)/np.abs(Line[0][1]-Line[1][1])
+    return [IsInt, t]
+
+
+def VLineIntersection(Line, xval):
+    """Detect intersection between given line and a vertical line."""
+    IsInt = False
+    t = None
+    if ((Line[0][0] > xval and Line[1][0] < xval) or
+            (Line[0][0] < xval and Line[1][0] > xval)):
+        IsInt = True
+        t = np.abs(Line[0][0]-xval)/np.abs(Line[0][0]-Line[1][0])
+    return [IsInt, t]
 
 
 def AreaZeroTimeBaseSingle(aix, aiy, bix, biy, cix, ciy, afx, afy,
@@ -545,10 +595,10 @@ def GetCircumCircleCenter(PtsIn):
     return [PtOutx, PtOuty]
 
 
-def Curl(vec1, vec2):
-    """Curl of two vectors.
+def Cross(vec1, vec2):
+    """Cross product of two vectors.
 
-    Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2.
+    Cross returns the cross product of two (2d) vectors (as lists) vec1 X vec2.
     Output is single number (z-component of resultant vec)
     """
     return vec1[0]*vec2[1] - vec1[1]*vec2[0]

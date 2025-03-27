@@ -1577,8 +1577,8 @@ class Triangulation2D(Triangulation2D_Base):
         vertices = np.array([copy.copy(self.pointpos[p]) for p in simp.points])
         trial_pt = np.array(pt)
         for i in range(3):
-            c_i = HF.Curl(vertices[(i+1) % 3]-vertices[i],
-                          trial_pt - vertices[i])
+            c_i = HF.Cross(vertices[(i+1) % 3]-vertices[i],
+                           trial_pt - vertices[i])
             if c_i < 0.0:
                 return False
         return True
@@ -1959,8 +1959,8 @@ class Triangulation2D(Triangulation2D_Base):
             #  If so, we modify the control points
             for i in range(3):
                 side = 2  # default is left
-                C1 = HF.Curl(AdjEdgeHalf[i, :] - EdgeHalf[i, :],
-                             EdgeHalf[i, :] - CenterEdgeHalf[i, :])
+                C1 = HF.Cross(AdjEdgeHalf[i, :] - EdgeHalf[i, :],
+                              EdgeHalf[i, :] - CenterEdgeHalf[i, :])
                 if C1 > 0:
                     side = 1  # right
                 Line1 = [CenterEdgeHalf[i, :], AdjEdgeHalf[i, :]]

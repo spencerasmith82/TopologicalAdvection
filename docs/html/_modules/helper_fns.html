@@ -339,9 +339,9 @@
 
 
 
-<div class="viewcode-block" id="IsIntersection">
-<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsIntersection">[docs]</a>
-<span class="k">def</span> <span class="nf">IsIntersection</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">,</span> <span class="n">timeinfo</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="IsIntersection2">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsIntersection2">[docs]</a>
+<span class="k">def</span> <span class="nf">IsIntersection2</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">,</span> <span class="n">timeinfo</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Do the two line segments intersect eachother.</span>
 
 <span class="sd">    IsIntersection takes in two lines (each defined by two points) and outputs</span>
@@ -350,6 +350,9 @@
 <span class="sd">    whose parameterized intersection time is returned.  The time is the</span>
 <span class="sd">    fraction of the line from Line1[0] to Line1[1]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># note that this has been superseded by IsIntersection, HLineIntersection,</span>
+    <span class="c1"># and VLineIntersection, which are more numerically stable for our use</span>
+    <span class="c1"># cases</span>
     <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">D1x</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># line 1 difference in x endpoints</span>
     <span class="n">D1y</span> <span class="o">=</span> <span class="n">Line1</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line1</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># same for y</span>
@@ -384,6 +387,62 @@
         <span class="k">return</span> <span class="p">[</span><span class="n">IsInt</span><span class="p">,</span> <span class="n">t1</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">IsInt</span>  <span class="c1"># return just whether there is a good intersection</span></div>
+
+
+
+<div class="viewcode-block" id="IsIntersection">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.IsIntersection">[docs]</a>
+<span class="k">def</span> <span class="nf">IsIntersection</span><span class="p">(</span><span class="n">Line1</span><span class="p">,</span> <span class="n">Line2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Do the two line segments intersect eachother.</span>
+
+<span class="sd">    IsIntersection takes in two lines (each defined by two points) and outputs</span>
+<span class="sd">    True if they intersect (between each of their point pairs).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">L1i</span><span class="p">,</span> <span class="n">L1f</span> <span class="o">=</span> <span class="n">Line1</span>
+    <span class="n">L2i</span><span class="p">,</span> <span class="n">L2f</span> <span class="o">=</span> <span class="n">Line2</span>
+    <span class="n">c12i</span> <span class="o">=</span> <span class="n">Cross</span><span class="p">([</span><span class="n">L1f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L1f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                 <span class="p">[</span><span class="n">L2i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L2i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">c12f</span> <span class="o">=</span> <span class="n">Cross</span><span class="p">([</span><span class="n">L1f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L1f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                 <span class="p">[</span><span class="n">L2f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L2f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L1i</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="k">if</span> <span class="n">c12i</span><span class="o">*</span><span class="n">c12f</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="c1"># ends of line2 are on same side of line1 - no intersection</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">c21i</span> <span class="o">=</span> <span class="n">Cross</span><span class="p">([</span><span class="n">L2f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L2f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                 <span class="p">[</span><span class="n">L1i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L1i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="n">c21f</span> <span class="o">=</span> <span class="n">Cross</span><span class="p">([</span><span class="n">L2f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L2f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                 <span class="p">[</span><span class="n">L1f</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">L1f</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">L2i</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+    <span class="k">if</span> <span class="n">c21i</span><span class="o">*</span><span class="n">c21f</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="c1"># ends of line1 are on same side of line2 - no intersection</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<div class="viewcode-block" id="HLineIntersection">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.HLineIntersection">[docs]</a>
+<span class="k">def</span> <span class="nf">HLineIntersection</span><span class="p">(</span><span class="n">Line</span><span class="p">,</span> <span class="n">yval</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect intersection between given line and a horizontal line.&quot;&quot;&quot;</span>
+    <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">yval</span> <span class="ow">and</span> <span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">yval</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">yval</span> <span class="ow">and</span> <span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">yval</span><span class="p">)):</span>
+        <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">yval</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">IsInt</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="VLineIntersection">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.VLineIntersection">[docs]</a>
+<span class="k">def</span> <span class="nf">VLineIntersection</span><span class="p">(</span><span class="n">Line</span><span class="p">,</span> <span class="n">xval</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect intersection between given line and a vertical line.&quot;&quot;&quot;</span>
+    <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">xval</span> <span class="ow">and</span> <span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xval</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xval</span> <span class="ow">and</span> <span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">xval</span><span class="p">)):</span>
+        <span class="n">IsInt</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">xval</span><span class="p">)</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Line</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">Line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">IsInt</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span></div>
 
 
 
@@ -672,12 +731,12 @@
 
 
 
-<div class="viewcode-block" id="Curl">
-<a class="viewcode-back" href="../helper_fns.html#helper_fns.Curl">[docs]</a>
-<span class="k">def</span> <span class="nf">Curl</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Curl of two vectors.</span>
+<div class="viewcode-block" id="Cross">
+<a class="viewcode-back" href="../helper_fns.html#helper_fns.Cross">[docs]</a>
+<span class="k">def</span> <span class="nf">Cross</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cross product of two vectors.</span>
 
-<span class="sd">    Curl returns the curl of two (2d) vectors (as lists) vec1 X vec2.</span>
+<span class="sd">    Cross returns the cross product of two (2d) vectors (as lists) vec1 X vec2.</span>
 <span class="sd">    Output is single number (z-component of resultant vec)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">vec1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">vec2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">vec1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">vec2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
