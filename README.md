@@ -24,4 +24,4 @@ In the following video, the advected particle trajectories are from a simulation
 https://github.com/user-attachments/assets/c61ff3c1-f57b-4941-9b59-f3ceca115a58
 
 ## Contact
-If you have any questions, or would like to let me know about how you are using this code, feel free to email me at: smith@mtholyoke.edu
+If you have any questions, or would like to let me know about how you are using this code, feel free to email me at: smiths@mtholyoke.edu
