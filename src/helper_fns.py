@@ -76,7 +76,7 @@ def GetBoundingDomainTraj(Tslices, PeriodicBC=False, frac=None):
 
 
 def TriEdgeCrossBnd(triangle, boundary):
-    """Do the triangle edges crosse one of the domain boundaries."""
+    """Do the triangle edges cross one of the domain boundaries."""
     BoundaryPoints = [[boundary[0][0], boundary[0][1]],
                       [boundary[1][0], boundary[0][1]],
                       [boundary[1][0], boundary[1][1]],
@@ -103,6 +103,15 @@ def CounterToStr(countin):
         return str(countin)
     else:
         return "countertoobig"
+
+
+def GetTriArea(PtList):
+    """Return the area of the triangle given by the 3 point positions."""
+    dx1 = PtList[1][0] - PtList[0][0]
+    dy1 = PtList[1][1] - PtList[0][1]
+    dx2 = PtList[2][0] - PtList[0][0]
+    dy2 = PtList[2][1] - PtList[0][1]
+    return 0.5*np.abs(dx2*dy1 - dy2*dx1)
 
 
 def BinarySearch(ListIn, TimeIn):

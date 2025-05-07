@@ -821,12 +821,24 @@ class Triangulation2D(Triangulation2D_Base):
                 ptidsj = ptfdID[edgesimps[j]]
                 for k in range(3):
                     if all(ptidsi == np.roll(ptidsj, k, axis=0)):
-                        #  if true, then the i and j triangles map to the same
-                        #  points in the FD and they are the same triangle
-                        Equiv_Tri[edgesimps[i]].append([edgesimps[j], k])
-                        Equiv_Tri[edgesimps[j]].append(
-                            [edgesimps[i], (2*k) % 3])
-                        break
+                        #  rare occurance: different boundary triangles share
+                        #  the same FD points (in same order), but are distinct
+                        #  can happen for small (~4) number of points.
+                        #  Will compare areas (using original points)
+                        ptidlisti = temptri.simplices[edgesimps[i]].tolist()
+                        ptlisti = [temppoints[ptid] for ptid in ptidlisti]
+                        triareai = HF.GetTriArea(ptlisti)
+                        ptidlistj = temptri.simplices[edgesimps[j]].tolist()
+                        ptlistj = [temppoints[ptid] for ptid in ptidlistj]
+                        triareaj = HF.GetTriArea(ptlistj)
+                        if np.abs(triareai - triareaj)/triareai < 1e-6:
+                            #  if true, then the i and j triangles map to
+                            #  the same points in the FD and they are the
+                            #  same triangle
+                            Equiv_Tri[edgesimps[i]].append([edgesimps[j], k])
+                            Equiv_Tri[edgesimps[j]].append(
+                                [edgesimps[i], (2*k) % 3])
+                            break
         #  Now we create the simplices.  Include all simplices with all pts
         #  in the FD, for ones with one or two pts in the FD, choose the first
         #  one encountered among the equiv. copies.  for each equiv copy not
